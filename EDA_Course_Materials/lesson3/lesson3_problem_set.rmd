@@ -1,0 +1,292 @@
+Lesson 3 - Problem Set
+========================================================
+***
+###  Load Diamond data
+
+***
+```{r }
+getwd()
+
+library(ggplot2)
+data("diamonds")
+summary(diamonds)
+
+?diamonds
+diamonds$color
+
+```
+
+***
+###Create a histogram of the price of all the diamonds in the diamond data set.
+
+***
+```{r histogram of diamonds price}
+qplot(x=price, data=diamonds)
+
+qplot(x=price, data=diamonds) + scale_x_log10()
+```
+***
+### Diamond Counts - number of diamonds with different price range
+
+***
+
+```{r number of diamonds with different price range}
+length(which(diamonds$price < 500))
+length(which(diamonds$price < 250))
+length(which(diamonds$price >= 15000))
+
+sum(diamonds$price < 500)
+```
+
+***
+### Cheap Diamonds - Explore the largest peak in the price histogram created earlier.
+
+***
+
+```{r}
+qplot(x=price, data=subset(diamonds, !is.na(price)),   
+      binwidth = 50, color=I('black'), fill=I('purple')) + 
+      scale_x_continuous(lim=c(0, 3000), breaks=seq(0, 3000, 100))
+ggsave('pricehistogram.png')
+
+summary(diamonds$price)
+    
+```
+
+***
+### Price by cut histograms
+
+***
+
+```{r Price by cut histograms}
+qplot(x=cut, data=subset(diamonds, !is.na(price)))
+
+```
+
+
+***
+### Price by cut histograms
+
+***
+
+```{r Price by cut histograms}
+qplot(x=cut, data=subset(diamonds, !is.na(price)))
+
+```
+
+
+
+***
+### Price by Cut
+
+***
+
+```{r price by cut}
+by(diamonds$price, diamonds$cut, summary, digits = max(getOption('digits')))
+
+```
+
+***
+### Scales and Multiple Histogram
+
+***
+
+```{r Scales and Multiple Histogram}
+qplot(x = price, data = diamonds) + facet_wrap(~cut, scales='free_y')
+
+
+```
+```{r}
+qplot(x = price, data = diamonds) + facet_grid(~cut)
+```
+
+***
+### Price per carat by cut
+
+***
+
+```{r Price per carat by cut}
+qplot(x = price/carat, data = diamonds,  color=I('black'),  
+        fill=I('purple'), xlab='Price per Carat') + 
+        scale_x_log10() + 
+        facet_wrap(~cut, scales='free_y')
+
+```
+
+***
+### Price Box Plot
+
+***
+
+```{r Price Box Plot - by cut}
+qplot(x=cut, y=price, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      scale_y_continuous(lim=c(1000, 3000))
+ggsave('priceHistogramByCut.png')
+
+```
+
+```{r Price Box Plot - by clarity}
+qplot(x=clarity, y=price, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      scale_y_continuous(lim=c(1000, 17500))
+ggsave('priceHistogramByClarity.png')
+```
+
+```{r Price Box Plot - by color}
+qplot(x=color, y=price, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      coord_cartesian(ylim=c(1000, 7500))
+ggsave('priceHistogramByColor.png')
+```
+
+***
+### Interquartile Range - IQR
+
+***
+
+```{r Interquartile Range - IQR}
+by(diamonds$price, diamonds$color, summary)
+by(diamonds$price, diamonds$clarity, summary)
+by(diamonds$price, diamonds$cut, summary)
+
+?diamonds
+```
+
+***
+### Price Per Carat Box Plot
+
+***
+
+```{r Price Per Carat Box Plot - by cut}
+qplot(x=cut, y=price/carat, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      scale_y_continuous(lim=c(1000, 3500))
+ggsave('pricePerCaratHistogramByCut.png')
+
+```
+
+```{r Price Per Carat Box Plot - by clarity}
+qplot(x=clarity, y=price/carat, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      scale_y_continuous(lim=c(1000, 17500))
+ggsave('pricePerCaratHistogramByClarity.png')
+```
+
+```{r Price Per Carat Box Plot - by color}
+qplot(x=color, y=price/carat, data=subset(diamonds, !is.na(price)),
+      color=I('black'), fill=color, geom='boxplot') +
+      coord_cartesian(ylim=c(1500, 6000))
+ggsave('pricePerCaratHistogramByColor.png')
+
+```
+
+```{r}
+by(diamonds$price/diamonds$carat, diamonds$color, summary)
+by(diamonds$price/diamonds$carat, diamonds$clarity, summary)
+by(diamonds$price/diamonds$carat, diamonds$cut, summary)
+```
+
+
+***
+### Carat Frequency Polygon
+
+***
+
+```{r Carat Frequency Polygon}
+qplot(x=carat, data=diamonds, binwidth=0.3, geom='freqpoly') +
+      scale_x_continuous(lim=c(0, 3), breaks=seq(0, 3, 0.1))
+
+```
+
+```{r}
+countByCarat <- table(diamonds$carat)
+countByCarat[countByCarat > 2000] 
+```
+***
+Result from above
+ 0.3 0.31 1.01 
+2604 2249 2242 
+***
+***
+### Gapminder Data - women labor participation and unployment rate
+
+***
+
+```{r Gapminder Data - women labor participation and unployment rate}
+
+labor <- read.csv("./f_25_54_labour_to_pop_percent/data.csv", head=TRUE, sep=',')
+umploy <- read.csv("./f_25_54_unemploy/data.csv", head=TRUE, sep=',')
+
+```
+
+```{r - add library}
+install.packages('dplyr')
+library(dplyr)
+install.packages('tidyr')
+library(tidyr)
+
+library(ggplot2)
+```
+
+```{r - extract us data and combine}
+us_participation <- filter(labor, country == 'United States')
+participationRateByYear <- gather(us_participation, 'year', 'labor', 2:30)
+
+us_unemploy <- filter(umploy, country =='United States')
+unemployRateByYear <- gather(us_unemploy, 'year', 'unemploy', 2:27)
+
+us_rates <- left_join(participationRateByYear, unemployRateByYear, by = 'year')
+
+us_rates %>% mutate(ratio = unemploy / labor)
+
+View(us_rates)
+```
+
+```{r - graphs}
+qplot(x=year, y=labor, data=us_rates)
+qplot(x=year, y=unemploy, data=us_rates)
+
+ggplot(us_rates, aes(x=year, y = value, color = variable)) + 
+    geom_point(aes(y = labor, col = "Labor Participation %")) + 
+    geom_point(aes(y = unemploy, col = "Unemployment %")) +
+    geom_point(aes(y = unemploy / labor, col='Unemploy / Participation'))
+ggsave('f_25_54_unemploy_rate_vs_participation.png')
+```
+***
+Conclusion: Women unemplpoyment rate drop as participation rate increase.  The ratio of unemployment vs. participation stays constant relatively speaking.
+***
+```{r}
+rm(us_participation)
+rm(us_unemploy)
+rm(us_rates)
+rm(labor)
+rm(umploy)
+rm(participationRateByYear)
+rm(p)
+
+```
+
+***
+### Explore your friends' Birthdays
+
+***
+
+```{r Explore your friends' Birthdays}
+birthdays = read.csv('birthdaysExample.csv')
+birthdays <- separate(birthdays, dates, c('month', 'day', 'year'), sep='/')
+
+```
+
+```{r birth month distribution by month}
+birthdays$month = as.numeric(birthdays$month)
+birthdays$day = as.numeric(birthdays$day)
+
+ggplot(birthdays, aes(x=month, color='black', fill='purple')) + ggtitle('Birth Months Distribution') + geom_bar() + scale_x_discrete('month')
+ggsave('birthMonthDistribution.png')
+
+ggplot(birthdays, aes(x=day, color='black', fill='purple')) + ggtitle('Birth Days Distribution') + geom_bar() + scale_x_discrete('day')
+ggsave('birthDaysDistribution.png')
+```
+
+
