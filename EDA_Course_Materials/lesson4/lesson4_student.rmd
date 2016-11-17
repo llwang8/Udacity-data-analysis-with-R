@@ -13,6 +13,12 @@ Notes:
 Notes:
 
 ```{r Scatterplots}
+library(ggplot2)
+pf <- read.csv('../pseudo_facebook.tsv', sep='\t')
+
+qplot(x=age, y=friend_count, data=pf)
+
+qplot(age, friend_count, data=pf)
 
 ```
 
@@ -20,14 +26,19 @@ Notes:
 
 #### What are some things that you notice right away?
 Response:
-
+Some under 30 people have a lot more friends.
+Oddly, some people over 90 have many friends.  There are a few spikes of friends count among 60s and over 90 people.
 ***
 
 ### ggplot Syntax
 Notes:
 
 ```{r ggplot Syntax}
+ggplot(aes(x=age, y=friend_count), data=pf) + 
+  geom_point(alpha=1/20) + 
+  xlim(13, 90)
 
+summary(pf$age)
 ```
 
 ***
@@ -36,42 +47,53 @@ Notes:
 Notes:
 
 ```{r Overplotting}
-
+ggplot(aes(x=age, y=friend_count), data=pf) + 
+  geom_point(alpha=1/20) + 
+  xlim(13, 90)
 ```
 
 #### What do you notice in the plot?
 Response:
-
+two peaks distribution. one for people under 30, one for 69
 ***
 
 ### Coord_trans()
 Notes:
 
 ```{r Coord_trans()}
-
+?coord_trans()
 ```
 
 #### Look up the documentation for coord_trans() and add a layer to the plot that transforms friend_count using the square root function. Create your plot!
 
 ```{r}
-
+ggplot(aes(x=age, y=friend_count), data=pf) + 
+  geom_point(alpha=1/20, position=position_jitter(h=0)) + 
+  xlim(13, 90) +
+  coord_trans(y = 'sqrt')
 ```
 
 #### What do you notice?
-
+There are not much friend count around 90 year of age, which looks more reasonable.
 ***
 
 ### Alpha and Jitter
-Notes:
+Notes:Friendships initiated peak for people under 20. After 30, people have relatively steady rate of initiating new friendships.
 
 ```{r Alpha and Jitter}
-
+ggplot(aes(x=age, y=pf$friendships_initiated), data=pf) +
+  geom_point(alpha=1/20, position=position_jitter(h=0)) +
+  xlim(13, 90) +
+  coord_trans(y='sqrt')
 ```
 
 ***
 
 ### Overplotting and Domain Knowledge
 Notes:
+Learn how to use jitter and transpancy to reduce overplot.
+
+geom_point(alpha=1/20, position=position_jitter(h=0))
 
 ***
 
@@ -79,12 +101,44 @@ Notes:
 Notes:
 
 ```{r Conditional Means}
+install.packages('dplyr')
+library(dplyr)
+
+age_groups = group_by(pf, age)
+pf.fc_age <- summarise(age_groups, 
+          friend_count_mean = mean(as.numeric(friend_count)), 
+          friend_count_median = median(as.numeric(friend_count)),
+          n = n())
+
+head(pf.fc_age)
+```
+
+### Conditional Means
+Notes:
+
+```{r Conditional Means}
+install.packages('dplyr')
+library(dplyr)
+
+pf.fc_age2 <- pf %>% 
+  group_by(pf, age) %>%
+  summarise(age_groups, 
+          friend_count_mean = mean(as.numeric(friend_count)), 
+          friend_count_median = median(as.numeric(friend_count)),
+          n = n()) %>%
+  arrange(age)
+
+head(pf.fc_age2)
 
 ```
 
 Create your plot!
 
 ```{r Conditional Means Plot}
+
+ggplot(aes(x=age, y=friend_count_mean), data=pf.fc_age) +
+  geom_line() +
+  xlim(13, 90)
 
 ```
 
@@ -94,12 +148,20 @@ Create your plot!
 Notes:
 
 ```{r Overlaying Summaries with Raw Data}
+ggplot(aes(x=age, y=pf$friendships_initiated), data=pf) +
+  geom_point(alpha=1/20, position=position_jitter(h=0), color='orange') +
+  coord_cartesian( xlim=c(13, 70), ylim=c(0, 1000)) +
+  geom_line(stat = 'summary', fun.y=mean) +
+  geom_line(stat = 'summary', fun.y=quantile, fun.args = list(probs = .1),
+            linetype=2, color='blue') +
+    geom_line(stat = 'summary', fun.y = quantile, fun.args = list(probs = .9), linetype=2, color='blue') +
+  geom_line(stat = 'summary', fun.y=quantile, fun.args = list(probs = .9),             linetype=2, color='blue')
 
 ```
 
 #### What are some of your observations of the plot?
 Response:
-
+Under 20 people have higher friend count of close 1000.  80 to 90 people have unrealistic high friend count. There is an odd spike of high friend count around age 69.  The rest people generally have about 250 friend count.
 ***
 
 ### Moira: Histogram Summary and Scatterplot
@@ -113,34 +175,41 @@ Notes:
 Notes:
 
 ```{r Correlation}
+cor.test(pf$age, pf$friend_count, method = 'pearson')
 
+with(pf, cor.test(age, friendc_count, method = 'pearson'))
 ```
 
 Look up the documentation for the cor.test function.
 
 What's the correlation between age and friend count? Round to three decimal places.
 Response:
-
+-0.027. There is no meaningful coorelation between age and friend count.
 ***
 
 ### Correlation on Subsets
-Notes:
+Notes:-0.1712144 tells of negative relationship between age and friend count.  As age increases we can see friend decreases.  It's important to note that one variable doesn't cause the other.  It's unwise to say growing old means you have fewer internet friends.  We'd really need to have data from experimental research and make use of inferential statistics, rather than descriptive statistics to address causality.  
 
 ```{r Correlation on Subsets}
-with(                 , cor.test(age, friend_count))
+with( subset(pf, age <= 70), cor.test(age, friend_count))
 ```
 
 ***
 
 ### Correlation Methods
 Notes:
-
+The Pearson product-moment coorelation measures the strength of relationship between two variables, but there can be lots of other type of relationships. Even other ones that are monotonic, either increasing or decreasing.  So we also have measures of monotonic relationship, such as rank coorelation measures like Spearman.  We can assign Spearman to method parameter and calculate coorelation that way.  Here we have different test statistics called row, and notice how our values is slightly different as well.  The main point is that a single number coefficient like this is usefull, but they are not great substitue for looking at scatterplot and computing condition summary like we did earlier.  
 ***
 
 ## Create Scatterplots
 Notes:
 
 ```{r}
+ggplot(aes(x=www_likes_received, y=likes_received), data=pf) +
+  coord_trans(x='sqrt', y='sqrt') +
+  geom_line(stat = 'summary', fun.y=mean) +
+  geom_line(stat = 'summary', fun.y=quantile, fun.args=list(probs = .1),
+            linetype=2, color='blue')
 
 ```
 
@@ -150,13 +219,18 @@ Notes:
 Notes:
 
 ```{r Strong Correlations}
-
+ggplot(aes(x=www_likes_received, y=likes_received), data=pf) +
+  geom_point() +
+  xlim(0, quantile(pf$www_likes_received, .95)) +
+  ylim(0, quantile(pf$likes_received, .95)) +
+  geom_smooth(method='lm', color='red')
+  
 ```
 
 What's the correlation betwen the two variables? Include the top 5% of values for the variable in the calculation and round to 3 decimal places.
 
 ```{r Correlation Calcuation}
-
+cor.test(pf$www_likes_received, pf$likes_received)
 ```
 
 Response:
@@ -165,42 +239,60 @@ Response:
 
 ### Moira on Correlation
 Notes:
-
+When working on some problems, she is going to do some regression where modeling something.  She is going to throw some variables into regression.  One of the assumption of the regression is that these variables are independent of each other. If any two of them are highly coorelated to each other, it will be really difficult to tell which one is really the driving force of the phenomenon.  So it is important to measure the coorelation between your variables first.  It will help you determine which one you don't actually want to throw in together, it might help you to decide which one you actually want to keep.
 ***
 
 ### More Caution with Correlation
 Notes:
+But coorlation coefficient is deceptive if you are not careful.  Plotting your data is the best way to help you understand it  and it can lead you to key insights.
 
 ```{r More Caution With Correlation}
-install.packages('alr3')
+updateR()
+packageurl <- "https://cran.r-project.org/src/contrib/Archive/pbkrtest/pbkrtest_0.4-4.tar.gz" 
+install.packages(packageurl, repos=NULL, type="source")
+install.packages("car",dependencies=TRUE)
+install.packages('alr3',dependencies=TRUE)
+
 library(alr3)
+data(Mitchell)
+
+?Mitchell
 ```
 
 Create your plot!
 
 ```{r Temp vs Month}
+ggplot(aes(x=Month, y=Temp), data=Mitchell) +
+  geom_point()
 
+cor.test(Mitchell$Month, Mitchell$Temp)
 ```
 
 ***
 
 ### Noisy Scatterplots
 a. Take a guess for the correlation coefficient for the scatterplot.
-
+0.01
 b. What is the actual correlation of the two variables?
 (Round to the thousandths place)
-
+0.057
 ```{r Noisy Scatterplots}
+library(scales)
+ggplot(aes(x=Month, y=Temp), data=Mitchell) +
+  geom_point() 
 
+range(Mitchell$Month)
 ```
 
 ***
 
 ### Making Sense of Data
 Notes:
-
+cyclical pattern
 ```{r Making Sense of Data}
-
+ggplot(aes(x=Month%%12, y=Temp), data=Mitchell) +
+  geom_point() +
+  scale_x_discrete(breaks = seq(0, 203, 12))
 ```
 
 ***
@@ -212,7 +304,7 @@ Response:
 
 Watch the solution video and check out the Instructor Notes!
 Notes:
-
+This is one example of how it's so important to get perspective of your data.  You want to make sure to put data in context.  Another important point is that proportion and scale do matter. Pioneers of data visualization suggest that the nature of the data should suggest the shape of graphic. Otherwise you tend to have a graphic that's about 50% wider than it is tall.
 ***
 
 ### Understanding Noise: Age to Age Months
@@ -220,6 +312,7 @@ Notes:
 
 ```{r Understanding Noise: Age to Age Months}
 
+pf$age_with_months <- pf$age + (12 - pf$dob_month) / 12
 ```
 
 ***
@@ -227,6 +320,16 @@ Notes:
 ### Age with Months Means
 
 ```{r Age with Months Means}
+suppressMessages(library(dplyr))
+
+age_with_months_groups = group_by(pf, age_with_months)
+pf.fc_by_age_months <- summarise(age_with_months_groups, 
+                    friend_count_mean = mean(as.numeric(friend_count)), 
+                    friend_count_median = median(as.numeric(friend_count)), 
+                    n = n())
+pf.fc_by_age_months <- arrange(pf.fc_by_age_months)
+
+head(pf.fc_by_age_months)
 
 ```
 
@@ -240,6 +343,18 @@ Programming Assignment
 ### Noise in Conditional Means
 
 ```{r Noise in Conditional Means}
+p1 <- ggplot(subset(pf.fc_age, age<71), aes(x=age, y=friend_count_mean)) + 
+  geom_line() +
+  geom_smooth()
+
+p2 <- ggplot(subset(pf.fc_by_age_months, age_with_months<71), aes(x=age_with_months, y=friend_count_mean)) +
+  geom_line() +
+  geom_smooth()
+
+p3 <- ggplot(aes(x=round(age/5)*5, y=friend_count), data=subset(pf, age<71)) + geom_line(stat='summary', fun.y = mean)
+
+library(gridExtra)
+grid.arrange(p2, p1, p3, ncol=1)
 
 ```
 
@@ -247,6 +362,9 @@ Programming Assignment
 
 ### Smoothing Conditional Means
 Notes:
+See we have less data point here? and wider bin width. we would estimate the mean more precisely, but potentially miss the important features of age and friend count relationship.  These 3 plots are examples of bias variance tradeoff, and it's similiar tradeoff we make when choosing bin width in histogram.  One way analyst can make this trade off is by using a flexible statistical model to smooth our estimates of conditional means.  ggplot makes it easier to fit such models using geom_smooth. So instead of seeing all these noise, we have a smooth modular function that will fit along.
+
+while smoother captures some of the features of this relationship, it doesn't draw attention to the low-motonic relationship in the low ages well.  Not only that, it really misses the discontinuity at 69.  This highlights that using models like low S or smoothing spline can be useful.  But like nearly any model, it can be subject to systematic errors when the true process generating our data isn't so consistent with the model itself.  Here the model is based on the idea that the true function is smooth.  But we really know that there's some discontinuity in the relationship.  
 
 ```{r Smoothing Conditional Means}
 
@@ -256,11 +374,12 @@ Notes:
 
 ### Which Plot to Choose?
 Notes:
-
+Often create multiple visualization and summaries of the same data, gleaning different incite from each, Thoughout the course, we iteratively refine a particular plot of the same data, it's not the late version is better than the previous version.  Sometime they are.  But, sometimes they're just revealing different things about the same data.  When you are working with a large audience, you may need to choose one or two visualization that best communicate the main findings of your work.
 ***
 
 ### Analyzing Two Variables
 Reflection:
+Learn to scatter plot with two variables, augmented with conditional summary lines (like mean and quantitle).  Learn to use geom_smooth() to smooth out plot line.  Balance tradeoff between smooth line and special feature of dataset plot. Learn cor.test() to calculate coorelation between two variables.  Test coorelation between variables to see how independent of each other before regression for modeling and decide which to include in your model.   Coorelation could be deceptive.  Plotting is the best way to understand dataset and can lead to new insight.  Learn not to trust initial data plot like soil temp vs. time. Learn how to use jitter and transpancy to reduce overplot.  Propertion and scale matter in understanding graph.  Put data into context.  
 
 ***
 

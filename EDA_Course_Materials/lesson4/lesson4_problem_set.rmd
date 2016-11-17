@@ -1,0 +1,331 @@
+Lesson 4 - Problem Set
+========================================================
+  ***
+  ###  Load Diamond data
+  
+  ***
+
+```{r}
+library(ggplot2)
+data("diamonds")
+?diamonds
+
+```
+  ***
+  ###  Quiz: Price vs. x
+  
+  ***
+  
+```{r}
+ggplot(aes(x=diamonds$x, y=price), data=diamonds) + 
+  geom_point(alpha=1/50, position=position_jitter(h=0)) +
+  xlim(3.75, 8.75) +
+  coord_trans(y='sqrt')
+```
+
+    ***
+  ###  Quiz: Findings - Price vs. x
+Notes:
+As x increases, price increase exponationally.  x range 2.75 to 8.75
+  ***
+
+  ***
+  ###  Quiz: Correlations
+  Notes: 0.88, 0.87, 0.86
+  ***
+  
+```{r}
+cor.test(x=diamonds$x, y=diamonds$price)
+cor.test(x=diamonds$y, y=diamonds$price)
+cor.test(x=diamonds$z, y=diamonds$price)
+```
+
+  ***
+  ###  Quiz: Price vs. Depth
+  
+  ***
+  
+```{r}
+ggplot(aes(x=depth, y=price), data=diamonds) + 
+  geom_point(alpha=1/50)
+```
+
+  ***
+  ###  Quiz: Adjustments - price vs. depth
+  
+  ***
+  
+```{r}
+ggplot(aes(x=depth, y=price), data=diamonds) + 
+  geom_point(alpha=1/100) +
+  scale_x_continuous(lim=c(58, 65), breaks = seq(58, 65, 2))
+```
+
+  ***
+  ###  Quiz: Typical depth range
+  Notes: Based of the scatterplot of price vs. depth, most diamonds are between 59 to 64 depth.  
+  ***
+
+  ***
+  ###  Quiz: Correlation - price and depth
+  Note: Because the -0.1 of correlation coefficient means depth is not correlated to price.
+  ***
+  
+```{r}
+cor.test(x=diamonds$depth, y=diamonds$price)
+```
+
+  ***
+  ###  Quiz: Price vs. carat
+  # Create a scatterplot of price vs carat and omit the top 1% of price and carat values
+  ***
+  
+```{r}
+ggplot(aes(x=carat, y=price), data=diamonds) +
+  geom_point(color='blue') +
+  scale_x_continuous(limits=c(0, quantile(diamonds$carat, 0.99))) +
+  scale_y_continuous((limits=c(0, quantile(diamonds$price, 0.99))))
+```
+
+  ***
+  ###  Quiz: Price vs. volume
+  # Create a scatterplot of price vs. volume (x * y * z).  This is a very rough approximation for a diamond's volume.
+  ***
+  
+```{r}
+diamonds$volume <- with(diamonds, x * y * z)
+ggplot(aes(x=volume, y=price), data=diamonds) +
+  geom_point(color='blue')
+ 
+```
+
+***
+  ###  Quiz: Findings - price vs. volume
+  Notes: Price increases with volume of diamonds.  Most diamonds volume range from 30 to 400.  There are some outliers, such as 20 diamonds at zero volume, one at almost 400.
+***
+```{r}
+library(plyr)
+count(diamonds$volume == 0)
+
+detach("package:plyr", unload=TRUE)
+```
+
+  
+***
+  ###  Quiz: Correlation on subset - 
+  Notes: exclude diamonds that have a volume of 0 or that are greater than or equal to 800. Correlation coefficient is 0.9235455
+  ***
+  
+```{r}
+with(diamonds[diamonds$volume > 0 & diamonds$volume < 800,], cor(volume, price))
+
+
+```
+
+***
+  ###  Quiz: Adjustments - price vs. volume
+  # Subset the data to exclude diamonds with a volume
+  # greater than or equal to 800. Also, exclude diamonds
+  # with a volume of 0. Adjust the transparency of the
+  # points and add a linear model to the plot. (See the
+  # Instructor Notes or look up the documentation of
+  # geom_smooth() for more details about smoothers.)
+***
+  
+```{r}
+
+ggplot(diamonds[diamonds$volume > 0 & diamonds$volume < 800, ], aes(x = volume, y = price)) +
+  geom_point(colour = 'blue') +
+  geom_smooth(method = 'lm', colour = 'purple') +
+  labs(title = "Price vs. Volume", x = "Volume", y = "Price (USD)" )
+
+```
+
+***
+  ###  Quiz: Mean price by clarity
+  # Use the function dplyr package
+  # to create a new data frame containing
+  # info on diamonds by clarity.
+
+  # Name the data frame diamondsByClarity
+
+  # The data frame should contain the following
+  # variables in this order.
+
+  #       (1) mean_price
+  #       (2) median_price
+  #       (3) min_price
+  #       (4) max_price
+  #       (5) n
+
+  # where n is the number of diamonds in each
+  # level of clarity.
+  ***
+  
+```{r}
+diamondsByClarity <- summarise(group_by(diamonds, clarity), 
+                               mean_price = mean(price),
+                               median_price = median(price),
+                               min_price = min(price),
+                               max_price = max(price),
+                               n = n())
+head(diamondsByClarity)
+```
+
+***
+  ###  Quiz: Bar charts of mean price
+  # We’ve created summary data frames with the mean price
+  # by clarity and color. You can run the code in R to
+  # verify what data is in the variables diamonds_mp_by_clarity
+  # and diamonds_mp_by_color.
+
+  # Your task is to write additional code to create two bar plots
+  # on one output image using the grid.arrange() function from the package
+  # gridExtra.
+  ***
+  
+```{r}
+diamonds_by_clarity <- group_by(diamonds, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, mean_price = mean(price))
+
+diamonds_by_color <- group_by(diamonds, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, mean_price = mean(price)) 
+
+p1 <- ggplot(data=diamonds_mp_by_color, aes(x=color, y=mean_price)) + geom_bar(stat='identity') +
+  labs(title='Diamonds: Mean Price by Color', x='Diamond Color', y='Mean Price (USD)')
+
+p2 <- ggplot(aes(x=clarity, y=mean_price), data=diamonds_mp_by_clarity) + geom_bar(stat='identity') +
+  labs(title='Diamonds: Mean Price by Clarity', x='Diamond Clarity', y='Mean Price (USD)')
+
+grid.arrange(p1, p2)
+```
+
+***
+  ###  Quiz: Trends in Mean price
+  Observation: From Diamonds: Mean Price by Color plot, it seems that mean prices trend higher from diamond color D to J.  From Diamonds: Mean Price by Clarity plot, it seems that mean price trends lower from diamond clarity improve from S12 to IF.  
+  ***
+  
+
+
+***
+  ###  Quiz: Gapminder revisited
+  # In your investigation, examine pairs of variable and create 2-5 plots     #that make use of the techniques from Lesson 4.
+  #       1. the variable(s) you investigated, your observations, and any summary statistics
+  #       2. snippets of code that created the plots
+  #       3. links to the images of your plots
+  ***
+  
+```{r - Gender ratio for countries}
+gender_ratios <- read.csv('./indicator_total_sex_ratio/data.csv', head = TRUE, sep = ',')
+
+```
+
+```{r}
+install.packages('dplyr')
+library(dplyr)
+install.packages('tidyr')
+library(tidyr)
+```
+
+```{r - US and China gender ratios by year}
+
+us_gender_ratios <- subset(gender_ratios, Total.sex.ratio == 'United States')
+us_gender_ratios <- gather(us_gender_ratios, 'year', 'us_ratio', 2:23)
+us_gender_ratios$year <-gsub("X", "", us_gender_ratios$year)
+  
+germany_gender_ratios <- subset(gender_ratios, Total.sex.ratio == 'Germany')
+germany_gender_ratios <- gather(germany_gender_ratios, 'year', 'germany_ratio', 2:23)
+germany_gender_ratios$year <-gsub("X", "", germany_gender_ratios$year)
+
+russia_gender_ratios <- subset(gender_ratios, Total.sex.ratio == 'Russia')
+russia_gender_ratios <- gather(russia_gender_ratios, 'year', 'russia_ratio', 2:23)
+russia_gender_ratios$year <-gsub("X", "", russia_gender_ratios$year)
+
+china_gender_ratios <- subset(gender_ratios, Total.sex.ratio == 'China')
+china_gender_ratios <- gather(china_gender_ratios, 'year', 'china_ratio', 2:23)
+china_gender_ratios$year <- gsub("X", "", china_gender_ratios$year)
+
+india_gender_ratios <- subset(gender_ratios, Total.sex.ratio == 'India')
+india_gender_ratios <- gather(india_gender_ratios, 'year', 'india_ratio', 2:23)
+india_gender_ratios$year <-gsub("X", "", india_gender_ratios$year)
+
+```
+
+```{r - mean ratios by year}
+country_yr_ratio = gather(gender_ratios, 'year', 'ratio', 2:23)
+test <- group_by(country_yr_ratio, year)
+
+gender_ratios_mean <- summarise(group_by(country_yr_ratio, year),
+                                   mean_ratio = mean(as.numeric(ratio)),
+                                   median_ratio = median(as.numeric(ratio)))
+```
+
+```{r - join data}
+us_gender_ratios_with_means <- left_join(us_gender_ratios, gender_ratios_by_year, by = 'year')
+
+china_gender_ratios_with_means <- left_join(china_gender_ratios, gender_ratios_by_year, by = 'year')
+```
+
+```{r - plots - in one column}
+p1_ratio <- ggplot(data=china_gender_ratios_with_means, aes(x=year, y=china_ratio)) + geom_bar(stat='identity', color = 'purple')  +
+  scale_y_discrete(limits=c(90, 110), breaks=seq(90, 110, 2))
+
+p2_ratio <- ggplot(data=us_gender_ratios_with_means, aes(x=year, y=us_ratio)) + geom_bar(stat='identity', color = 'blue')  +
+  scale_y_discrete(limits=c(90, 110), breaks=seq(90, 110, 2))
+
+grid.arrange(p1_ratio, p2_ratio)
+```
+
+```{r - plots combined - US and China}
+ggplot() + 
+geom_point(data=china_gender_ratios_with_means, aes(x=year, y=china_ratio), color = 'purple') +
+ geom_point(data=us_gender_ratios_with_means, aes(x=year, y=us_ratio), color = 'blue') +
+  labs(title = "US and China Gender Ratio Comparison", y = "Male / Female Gender Ratio", x = "Year" )
+
+ggsave('us_china_gender_ratio_comparison.png')
+```
+
+```{r - 5 countries plots combined}
+ggplot() + 
+  geom_point(data=china_gender_ratios, aes(x=year, y=china_ratio), color = 'yellow') +
+  geom_point(data=india_gender_ratios, aes(x=year, y=india_ratio), color = 'green') +
+ geom_point(data=us_gender_ratios, aes(x=year, y=us_ratio), color = 'blue') +
+  geom_point(data=germany_gender_ratios, aes(x=year, y=germany_ratio), color = 'black') +
+  geom_point(data=russia_gender_ratios, aes(x=year, y=russia_ratio), color = 'red') +
+  labs(title = "India, China, US, German and UK Gender Ratio Comparison", y = "Gender Ratio (Male / Female per 100)", x = "Year" ) +
+    scale_color_manual(name = 'the colour', 
+         values =c('yellow'='yellow', 'green'='green', 'blue'='blue', 'black'='black','red'='red'), labels = c('China','India', 'US', 'Germany', 'UK')) 
+
+
+ggsave('gender_ratio_comparison_5_countries.png')
+```
+
+***
+Intro: I examined gender ratio change over time for 5 countries: India, China, US, Germany and UK to see the effect on population of traditional belief of gender and war toll.  I did some data wrangling to reshape and combine datasets before plotting on the same graph.
+Conclusion:
+The ratio reflect people's belief, war toll and social environment change. In Chinese tradition, male is valued more than female.  The highest ratio was in 1950, right after Communist took over the country.  Years of war from Japanese invasion and civil war took a heavier toll on women even after considering the fact that men fought on the front and had heavy casualty. The lowest ratio ( male and female most balanced) was in 1960.  Women were encouraged by Chairman Mao to work and study equally like men since 1950 (not necessarily paid equally).  After 1960 the ratio increased gradually as the one-child policy were introduced in 1970, which reached peak nowadays. 
+
+India has similar traditional belief of gender preference.  It had high ratio of 108.  As it opened to the west since 1980s, ratio has been going down.
+
+While in US, from 1950 to 1970, ratio was down to 96 from, reflecting Korean and Vietnam war toll on male population.  It took around 4 decades to repair the imbalance.  Since 2000, ration has rebound to 98 nowadays.
+
+In Germany and Russia, the ratio were 85 and 75 respectively in 1950, resulting from heavy male causality from World War II. After 4 decades, Geman gender ratio has rebounded to 95, close to US's.  After 1995 for unexplained reason, Russia's gender ration stop at high point of 88 then drop slightly to 84 in 2015.
+
+Overall, India and China still have high gender ratios compared to western countries'.  Traditional belief of gender preference is not going to change right away.  My next question for future study is whether or not this kind of traditional belief for thousands of years has induced genetic change in population to have high ratio of males.
+
+***
+
+
+***
+notes for future use:
+
+west_europe <- c("Austria", "Belgium", "France", "Germany", "Netherlands", "Luxembourg", "Switzerland")
+south_europe <- c("Italy", "Spain", "Portugal", "Greece")
+north_europe <- c("Finland", "Norway", "Sweden", "Denmark", "Iceland")
+anglosphere <- c("Australia", "United Kingdom", "United States", "Ireland", "New Zealand", "Canada")
+asia <- c("Thailand", "Sri Lanka", "Japan", "Nepal", "Malaysia", "Hong Kong, China", "Bangladesh", "Pakistan")
+south_amer <- c("Chile", "Uruguay", "Mexico", "Colombia", "Ecuador", "Argentina", "Panama", "Brazil", "El Salvador", "Paraguay", "Peru", "Nicaragua")
+
+***
+
+  
