@@ -3,20 +3,39 @@ Lesson 5
 
 ### Multivariate Data
 Notes:
-
+learn how to examine 3 or more variable at a time.
 ***
 
 ### Moira Perceived Audience Size Colored by Age
-Notes:
-
+# Notes:
+# Her next question is maybe older people have a better sense than teenage of perceived audience size for a facebook post.  Add color to the scatplot to represent the age of survey respondent.  We have horizontal strips for people guessing there are 50 or 100 in their audience.  But she doesn't see any pattern in color, a dead end, an example of failure.  can't tell if young people are more accurate than old people.  There are too much overploting.  There are too many dots over each other and color really doesn't add much.
 ***
 
+```{r Pseudo-Facebook User Data}
+getwd()
+
+list.files()
+pf <- read.csv('../pseudo_facebook.tsv', sep='\t')
+names(pf)
+```
+
 ### Third Qualitative Variable
-Notes:
+# Notes:
+# Sometimes when we conduct exploratory data analysis, we do reach dead end.  let's see if we can get further in examing relationship of friend count and age by adding a third variable.  Previously we noted that female users have more friends on average than male users, we might wonder is this just because of female users have a different age distribution, or maybe conditional on age, the difference are actually larger.  
+
+# Add mean of each gender to boxplot using stats summary.  Mean is marked by x.  Since male users are a bit younger, we might actually think a simple male to female comparison doesn't capture the substantial difference in friend count.   Take a look a median friend count by age and gender intead. 
+
+# From the second plot, nearly everywhere the median friend count for women is larger than it is for men.  Now there are some exception.  And these include the noicy estimates for very "old" users.  not confident about these reported ages.  Notice that people who reported 70 have more or less the same friend count, regardless of reported gender.
 
 ```{r Third Qualitative Variable}
 ggplot(aes(x = gender, y = age),
-       data = subset(pf, !is.na(gender))) + geom_histogram()
+       data = subset(pf, !is.na(gender))) + geom_boxplot() +
+  stat_summary(fun.y = mean, geom = 'point', shape = 4)
+
+ggplot(aes(x = age, y = friend_count),
+       data = subset(pf, !is.na(gender)))  +
+  geom_line(aes(color = gender), stat = 'summary', fun.y = median)
+
 ```
 
 ***
@@ -25,14 +44,24 @@ ggplot(aes(x = gender, y = age),
 Notes:
 
 ```{r Plotting Conditional Summaries}
+pf.fc_by_age_gender <- pf %>%
+  filter(!is.na(gender)) %>%
+  group_by(age, gender) %>%
+  summarise(mean_friend_count = mean(friend_count), median_friend_count = median(as.numeric(friend_count)), n = n()) %>%
+  ungroup() %>%
+  group_by(age)
 
+ggplot(aes(x=age, y=median_friend_count), data=pf.fc_by_age_gender) +
+  geom_line(aes(color = gender))
 ```
 
 ***
 
 ### Thinking in Ratios
-Notes:
+# Notes:
+# These can be useful if we want to inspect these values or carry out further operations to help us understand how the difference between male or female users varies with age. Looking at this plot, it seems like gender difference is largest for our young users.  It would be helpful to put this in relative terms though.  
 
+A different question:  how many times more friends does the average female users have than the male users?
 ***
 
 ### Wide and Long Format
@@ -46,81 +75,160 @@ Notes:
 ```{r}
 install.packages('reshape2')
 library(reshape2)
+pf.fc_by_age_gender.wide <- dcast(pf.fc_by_age_gender, 
+                                  age ~ gender, 
+                                  value.var = 'median_friend_count')
 ```
-
 
 ***
 
 ### Ratio Plot
 Notes:
-
+# Plot the ratio of the female to male median
+# friend counts using the data frame
+# pf.fc_by_age_gender.wide.
 ```{r Ratio Plot}
-
+ggplot(aes(x=age, y=median_friend_count))
 ```
 
+```{r - use dplr}
+pf.fc_by_age_gender.wide <- subset(pf.fc_by_age_gender[c('gender', 'age', 'median_friend_count')], !is.na(gender)) %>%
+    spread(gender, median_friend_count) %>%
+    mutate(ratio = female / male)
+head(pf.fc_by_age_gender.wide)
+
+ggplot(aes(x=age, y=ratio), data=pf.fc_by_age_gender.wide) +
+  geom_line() +
+  geom_hline(yintercept = 1, alpha=0.3, linetype = 2)
+```
 ***
 
 ### Third Quantitative Variable
-Notes:
+# Notes:
+# Create a variable called year_joined
+# in the pf data frame using the variable
+# tenure and 2014 as the reference year.
 
+# The variable year joined should contain the year
+# that a user joined facebook.
 ```{r Third Quantitative Variable}
 
+pf$year_joined <- floor(2014 - pf$tenure / 365)
 ```
 
 ***
 
 ### Cut a Variable
-Notes:
+# Notes:
+# Using table(), we can see the distribution of users and each year joined.  Notice there isn't much data here in early joiners.  To increase the data we have in each tenure category, we can group some of these years together.  The cut function is often quite useful for making discret variables from continuous or numeric variables, sometimes in combination with the function quantile.
 
+# Create a new variable in the data frame
+# called year_joined.bucket by using
+# the cut function on the variable year_joined.
+
+# You need to create the following buckets for the
+# new variable, year_joined.bucket
+
+#        (2004, 2009]
+#        (2009, 2011]
+#        (2011, 2012]
+#        (2012, 2014]
 ```{r Cut a Variable}
+summary(pf$year_joined)
+table(pf$year_joined)
 
+pf$year_joined.bucket <- cut(pf$year_joined, breaks = c(2004, 2009, 2011, 2012, 2014))
+table(pf$year_joined.bucket)
 ```
 
 ***
 
 ### Plotting it All Together
-Notes:
+# Notes:
+# Create a line graph of friend_count vs. age
+# so that each year_joined.bucket is a line
+# tracking the median user friend_count across
+# age. This means you should have four different
+# lines on your plot.
+
+# You should subset the data to exclude the users
+# whose year_joined.bucket is NA.
+
+# looking at this plot, users with a longer tenure tend to have higher friend counts, with the exception of older users, say, about 80 and up.  To put these cohort specific median in perspective, we can change them into cohort specific means.  And plot the grand means down here as well.
 
 ```{r Plotting it All Together}
+ggplot(aes(x=age, y=friend_count), data=subset(pf, !is.na(year_joined.bucket))) + 
+  geom_line(aes(color=year_joined.bucket), stat = 'summary', fun.y = median)
 
 ```
 
 ***
 
 ### Plot the Grand Mean
-Notes:
+
+# Write code to do the following:
+
+# (1) Add another geom_line to code below
+# to plot the grand mean of the friend count vs age.
+
+# (2) Exclude any users whose year_joined.bucket is NA.
+
+# (3) Use a different line type for the grand mean.
+
+# Notes: Plotting the grand mean is a good reminder that much of the data in the sample is about members of the recent cohort.  This is the type of high level observation you want to make as you explore data. 
 
 ```{r Plot the Grand Mean}
+ggplot(aes(x=age, y=friend_count), data=subset(pf, !is.na(year_joined.bucket))) + 
+  geom_line(aes(color=year_joined.bucket), stat = 'summary', fun.y = mean) +
+  geom_line(stat = 'summary', fun.y = mean, linetype = 2) +
+  geom_hline(yintercept = mean(pf$friend_count), linetype = 3)
 
 ```
 
 ***
 
 ### Friending Rate
-Notes:
+# Notes: Since the general pattern continues to hold after conditioning on each of the buckets of year joined, we might increase our confidence that this observation isn't just an artifact of time users have had to accumulate friends.  Let's look at this relationship in another way.  We could also look at the tenure and friend count as a rate instead.  For example, we can see how many friends does a user have for each day since they have started using the service.
+
+# Create a summary of this rate, that shows how many friends a user has for each day since the user started using Facebook.  Subset the data so you only consider user with at least one day of tenure.
 
 ```{r Friending Rate}
+subset(pf, tenure >=1) %>% 
+  mutate(ratio = pf$friend_count / pf$tenure) %>%
+  summary(pf$ratio)
 
+with(subset(pf, tenure >= 1), summary(friend_count / tenure))
 ```
 
 ***
 
 ### Friendships Initiated
-Notes:
+# Notes:
+# This leaves me wondering if friend requests are the same or different across the group.  Do new users go on friending spree?  Or do user with more tenure initiate more friendship?  
 
-What is the median friend rate?
+# What is the median friend rate? 0.22
 
-What is the maximum friend rate?
+# What is the maximum friend rate? 417
+
+# Create a line graph of mean of friendships_initiated per day (of tenure)
+# vs. tenure colored by year_joined.bucket.
+
+# You need to make use of the variables tenure,
+# friendships_initiated, and year_joined.bucket.
+
+# You also need to subset the data to only consider user with at least
+# one day of tenure.
 
 ```{r Friendships Initiated}
-
+ggplot(aes(x=tenure, y=friendships_initiated / tenure), data=subset(pf, tenure>=1)) + 
+  geom_line(aes(color=year_joined.bucket), stat = 'summary', fun.y = mean)
 ```
 
 ***
 
 ### Bias-Variance Tradeoff Revisited
 Notes:
-
+There are a lot of noise in our graph since we are plotting the mean of y for every possible tenure x value.  Remember we can bend x axis differently. 
 ```{r Bias-Variance Tradeoff Revisited}
 
 ggplot(aes(x = tenure, y = friendships_initiated / tenure),
@@ -148,11 +256,24 @@ ggplot(aes(x = 90 * round(tenure / 90), y = friendships_initiated / tenure),
             fun.y = mean)
 
 ```
+# Instead of geom_line(), use geom_smooth() to add a smoother to the plot.
+# You can use the defaults for geom_smooth() but do color the line
+# by year_joined.bucket
 
+# Notes: In this smooth version of graph, we still see friendship initiated decline as tenure increases.
 ***
+```{r}
+ggplot(aes(x = tenure, y = friendships_initiated / tenure),
+       data = subset(pf, tenure >= 1)) +
+  geom_smooth(aes(color = year_joined.bucket)) 
+```
 
 ### Sean's NFL Fan Sentiment Study
 Notes:
+Some of the work he does is :
+He counted the ratio of positive to negative words at a 5-minutes increments over the course of 4-months of NFL season.  Because we are taking ratios, we end up with some measurements that are extremely high.  Like you know, posivtive to negative words ratio over a hundered eventhough the average is somewhere in the two to three range.  So this is kind like a first cut at the data, we can see there's some signal here.  But it definetely needs some modeling or some statistics in order to kind of tease what's actually happening.  So what I did was just computing a moving average of these 5-minutes measurements and we started to get a little bit of signals out there.  Because we are pooling over more measurements, so the measurements themselve are more reliable.  And we end with a series that kind of tell a little bit of a story.  But these measurements are still too frequent and too noisy to really tell a story about what's happening.  When we aggregate to one day moving averages, we started to see some patterns emerge.  I guess one of the key features of this dataset was that I knew what I was looking for ahead of time. Because I, I was a eagle fan.  I experiened the highs and lows of the seasons. I can look at a plot like this and immediately tell you that this is not the story that I want.  Maybe we need to apply some modeling to that.  We need a model that can predict sentiment as a function of time. One of the things that comes to mind right away is natural spline.  You can see this actually tells a nice story. These color lines are days of wins and losses.  It kind of give you an idea of why the lines are upward sloping and downward sloping.  So you can see here, it kind of like exuberance at the beginning of the season, people are kind of optimistic.  And then you know three losses in a roll, and see how the sentiment dips.  This tells a nice story, but it doesn't give us the features of that we've expected, which is that on game day, things change really abruptly.  At the very end of game, when you know if you've won or lost, you are much happier or sadder than you were at the beginning of the game.  So we expect to see really discret jumps in sentiments that we don't see from a model like this.  This is because of this is a bad modeling of the underlining data gathering process.  So we need something more flexible.  One way to do that is just using seven day moving average, which is going to allow us to include the last game sentiment in the moving average.  So we are going to pick a moving average, like shown before, let's smooth out into over a seven day moving average.  And when we do that, we get something that actually tells a nice story about the season.  It has all the kind of characteristic that I would expect as a fan in having gone through this.  Which is of, the big bumps up on the day where you win, the big bumps down on days where you lose.  And then, kind of, plateaus in between, which are these periods of stability when you don't have any information about how your team are doing.  We see a week off before thanksgiving but then there's a big spike in happiness because people are in Thanksgiving. This big low point right after the big loss that could have knocked them out of the playoffs.  And then a big kind of ascension to their playoff game which they ended up with losing and the subsequent dip. This is really a nice dipction of what happened and it took a little bit of averaging to get the story out.  
+
+When you look at this, what sorts of things come up for you in terms of bias and variance tradeoff.  When you are computing just a simple average like this, you are dealing with one of the most flexible statistics.  And so you are not imposing any structure on the data.  You are letting the data kind of speak.  When I use moving average here, I plotted standard errors that were rolling along with the data.  They were gigatic.  The mean sentiment here is the three range.  The standard errors were over 2 or 3. We can say very precisely what happen at any given point.  But our variance on that estimate is huge.  So as we started to add more lags, higher number of lags to the moving average, we end up with smoother looking plot that have lower variance but are getting progressively more bias.  So as we go back to include more data, and were getting more bias, we are including data from parts that actually aren't applicable to that exact point.  But in exchange for that, we are getting a low variance plot, one that doesn't move as widely.  When we combine that with splines, we end up with a fitting a model that has the best of both world.  Which has the smoothing, aspects of spline,  with the discret jumps of what happen on game day.  So this is spline where we add dummy variables for post fame period.  In this model, we end up with all the same things.  We get the big jumps that we expect.  It jumps down on losses, jumps up on wins.  And also the smooth transition in between.  So it's a nice story of taking one style of model, like spine, which is too specific for data generation.  and maybe not a good fit. In doing some exploratory data analysis where we see that averaging over 7 day tells of nice story and give us the discret we want.  Combinging these two together into an aggregate of the two types of models, where we were able to better account for the fact that game days are important things.
 
 ***
 
@@ -163,62 +284,122 @@ Notes:
 
 ### Histograms Revisited
 Notes:
+Because of internet transaction, there is a history of purchases over time.  Analysts in industry often mine this panel scanner, and economists and other behavior scientists use it to test and develop theories that consumer behaviors.  Going to work with a dataset describing household purchases of 5 flavors of Dannon yogurts in the 8-ounces size. 
+
+People tend to buy high price yogurt more. The highest is not the most favorable one.
 
 ```{r Histograms Revisited}
+yo <- read.csv('../yogurt.csv')
+str(yo)
+yo$id <- factor(yo$id)
+
+ggplot(aes(x=price), data=yo) + geom_histogram()
 
 ```
-
+observation: There are some important discretness in the distribution. There appear to be prices that have many observations but no observation in the adjacent prices.  This makes sense if prices are set in a way that applies to many of the consumers.  There are some purchases that involve much lower prices.  And if we are interested in price sensitivity, we definitely want to consider what sort of variations is in these prices.  If we choose different bins, we might obscure this discretness.  If we set bin width to 10, we would miss the observations for some of the empty spaces for the adjacent prices. So it's no surprise that for this very discret data, this histogram is a very biased model.   
 ***
 
 ### Number of Purchases
-Notes:
+# Notes:
+# There are other ways, if jumping to different analysis, we might have missed this.  For example, if we just look at 5-number summary of the data, we might not notice this so easily.  One clue to the discretness is that the 75th percentile is the same as maximum.  We could alse see this discretness by looking at how many distinct prices there are in the data set.  So here it looks like there are 20 different prices.  Tabling the variables we get an idea of the distribution like we saw in the distribution.  So now that we know something about the price, let's figure out on a given purchase occassion how many 8-ounce yogurts does a household purchases.  To answer this we need to combine accountants of the different yogurt flavors into one variables.  
+# Create a new variable called all.purchases,
+# which gives the total counts of yogurt for
+# each observation or household.
 
+# One way to do this is using the transform
+# function. You can look up the function transform
+# and run the examples of code at the bottom of the
+# documentation to figure out what it does.
+
+# The transform function produces a data frame
+# so if you use it then save the result to 'yo'!
+
+# OR you can figure out another way to create the
+# variable.
 ```{r Number of Purchases}
+                            
+yo<- transform(yo, all.purchases = strawberry + blueberry + pina.colada + plain + mixed.berry) 
 
+yo$all.purchases = yo$strawberry + yo$blueberry + yo$pina.colada + yo$plain + yo$mixed.berry
+                              
 ```
 
 ***
 
 ### Prices over Time
-Notes:
+#Notes:
+# Create a scatterplot of price vs time.
 
+# This will be an example of a time series plot.
+
+# Resolve overplotting issues by using
+# techniques you learned in Lesson 4.
+
+# Observation: discretness of price
+
+# Add geom_jitter to make plot a little bit transparant.  the modal of the most common price seems to be increasing over time.  We also see some lower price points scattered about the graph.  These maybe be due to sales, or perhaps buyers use coupons that bring down the price of yogurt.  
 ```{r Prices over Time}
-
+ggplot(aes(x=time, y=price), data=yo) + geom_point() +
+  geom_jitter(alpha=1/4, shape = 21, fill = 'orange')
 ```
 
 ***
 
 ### Sampling Observations
-Notes:
+# Notes:
+#From Dean how we might procees differently about this dataset.
+When familiarizing yourself with the new dataset that contains many observations of the same units, it's often useful to work with a sample of those units so that it's easy to display those raw data for that sample.  In the case of the yogurt data set, we might want to look at a small sample of household so that we know what kind of within and between household variance we are working with.  This kind of sub-sample might come before trying to use within household variance as part of model.  For example this dataset was originally used to model consumer preference for variety.  But before doing that, we'd want to look at how often we observed household buying yogurt, how often they buy multiple items, and what prices they're buying yogurt at.  One-way to do this is to look at some sub-sample in more details.  Let's look at 16 household at random and take a closer look.
 
 ***
 
 ### Looking at Samples of Households
 
 ```{r Looking at Sample of Households}
+set.seed(4235)
+sample.ids <- sample(levels(yo$id), 16)
 
+ggplot(aes(x=time, y=price), data=subset(yo, id %in% sample.ids)) +
+  facet_wrap(~id) +
+  geom_line() + 
+  geom_point(aes(size=all.purchases), pch=1)
 ```
+# Observations from Chris about seed: 4230: each panel for each household in the sample.  From these plots, we can see variation and how often each household buys yogurt.  Here, a lot and here, not much.  And it seems some househlod purchases more quantities than others.  For most of the household the price of yogurt hold steady, or tends to increase over time.  Now there are of course some exceptions.  We don't have coupon time to associate with this buying data, but you can see information could be paired to this data to better understand consumer bahavior. 
+
+# My observation of seed 4235: Most household purchase yogurt regularly over the time.  They take advantage of lower price if available.  Quantity stay at the same pattern for most households.  6 out 16 households show increased quantity at lower price or less yogurt consumption at high price.
 
 ***
 
 ### The Limits of Cross Sectional Data
-Notes:
-
+# Notes:
+# The genera idea is that if we have observations over time, we can facet by the primary unit, case, or individual in the data set.  For yogurt data, it was the household that we faceting.  This facetd time series is something we can't generate with pseudo-facebook dataset.  Since we don't have data of our sample users over time, it isn't great for examing the process of friending over time.   The data set is just a cross section.  It is a snapshot at a fixed point that tells us the characteristic of individuals.  Not individuals over a year.  But if we had a dataset like yogurt one, we would be able to track friendship initiated over time and compare that with tenure.  This would give us better evidence to explain the difference or drop in friendship initiated over time as tenure increase. 
 ***
 
 ### Many Variables
-Notes:
-
+# Notes:
+# Much of the analysis we have done so far focus on some pre-choosen variables, relationship or question of interet.  We then use EDA to let these variable speak and surprise us.  Most recently, when analyzing the relationship between 2 variables, we look to incorporate more variables to improve analysis.  For example, by seeing whether a particular relationship is consistent across values of those other variables.  In choosing the third or forth variable to plot we rely on our domain knowledge.  But often, we might want visualizations or summaries to help us identify such auxiliary variable.  In some analysis, we may plan to make a use of a large number variables.  Perhaps we are planning on predicting one variable with 10, or 20 other variables.  Or maybe we want to summarize a large set of variables.  into a small set of dimensions.  Or perhaps we are looking for interesting relationship among a large set of variables.  In such cases, we can help speed up our exploratory data analysis by producting many plots or comparison at once.  This could be one way to let the dataset as a whole speak in part by drawing our attention to variables we didn't have a preexisting interest in.  
 ***
 
 ### Scatterplot Matrix
-Notes:
-
+# Notes:
+# In a scatterplot matrix, there's a grid of scatter plots between every pairs of variables.  As we've seen, scatter plots are great but not necessarily suited for all types of variables.  For example, categorical ones.  So there are other types of visualizations that can be created instead of scatterplots.  Like box plots or histograms when the variables are categorical,  
 ***
+```{r}
+install.packages('GGally')
+library(GGally)
+theme_set(theme_minimal(20))
+```
+
+```{r}
+set.seed(1836)
+pf_subset <- pf[, c(2:7)]
+names(pf_subset)
+ggpairs(pf_subset[sample.int(nrows(pf_subset), 1000), ])
+```
+
 
 ### Even More Variables
-Notes:
-
+# Notes:
+# Examples arises in many areas.  But one has attracted the attention of statisticians is genomic data.  In these dataset, there are often thousands of genetic measurements for each of a small number of samples.  In some cases, some of these samples have disease, so we'd like to identify gene that are associated with the disease.  
 ***
 
 ### Heat Maps
@@ -239,13 +420,25 @@ ggplot(aes(y = gene, x = case, fill = value),
   geom_tile() +
   scale_fill_gradientn(colours = colorRampPalette(c("blue", "red"))(100))
 ```
-
+# Notes:
+# For our dataset, we want to display each combination of gene and sample case, the difference in gene epression and sample from the base line.  We want to display combinations where gene is over expressed in red, in combination where it is under express in blue.  
+# Even with such a dense display, we aren't looking at all the data.  In particular, we're just showing the first 200 genes.  That's 200 genes of over 6000 of them.  And since this data set was produced, Geonomic data set of these kind, sometimes called micro data are only getting larger and more complex.  What's most interesting is that other data sets also look like this.  For example, internet companies run a lot of randomized experiments.  Where in the simplist versions, users are randomly assigned to a treatment like a new version of web site or some sort of new features or product or a control condition. Then the difference in outcome between treatment and control can be computed for a number of metrics of interest.  In many situations, there might have been hundreds or thousands of experiments and hundreds of metrics.  This data is very similiar to genomic data in some ways.  That is why the useful matrix plot all the data might not always apply to a data set as it did to most of this course.  
 
 ***
 
 ### Analyzing Three of More Variables
 Reflection:
-
+Exame many variable at once expanding on techniques learned before. 
+Add the third variable to the data analysis of two variables with plotting using different color lines, panels, or facet.  Add summary lines like mean or median line to the plot as reference.
+Use summary() or table() to get general statistics from data first.
+Subset data, 
+Transform data shape with gather() or spread() before analysis or add new variable using existing variables involving mutate() or other function, like with().
+Use cut() to make discrete variables from continuous ones, sometimes in combination of quantile().
+Summarize data by group,  with()  and summary().
+Bias and variance tradeoff,
+Use smooth() to smooth out plot line.
+Examine price over time for different household using yogurt dataset to explore analyzing categorical Use a sample to get familiar with new data set.
+Learn about scatterplot matrix,
 ***
 
 Click **KnitHTML** to see all of your hard work and to have an html

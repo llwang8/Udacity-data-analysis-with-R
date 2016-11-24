@@ -84,7 +84,7 @@ cor.test(x=diamonds$depth, y=diamonds$price)
 ggplot(aes(x=carat, y=price), data=diamonds) +
   geom_point(color='blue') +
   scale_x_continuous(limits=c(0, quantile(diamonds$carat, 0.99))) +
-  scale_y_continuous((limits=c(0, quantile(diamonds$price, 0.99))))
+  scale_y_continuous(limits=c(0, quantile(diamonds$price, 0.99)))
 ```
 
   ***
