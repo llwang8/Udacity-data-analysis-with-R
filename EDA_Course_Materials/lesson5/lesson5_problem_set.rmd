@@ -9,6 +9,7 @@ data("diamonds")
 ?diamonds
 ```
 
+
 ## Price Histogram with Facet  
 # Create a histogram of diamond prices.
 # Facet the histogram by diamond color
@@ -222,7 +223,197 @@ ggplot(aes(x=cut, y=price/carat, color=color), data=diamonds) +
 
 ## Gapminder Multivariable  
 
+```{r}
+install.packages('dplyr')
+library(dplyr)
+install.packages('tidyr')
+library(tidyr)
+install.packages("gridExtra")
+library("gridExtra")
+```
+
+# I chose to investigate foreign direct investment inflow (% of GDP),  outflow (% of GDP), and investment (% of GDP) from gapminder.  I did a comparison study between US and China.
 
 ```{r Gapminder Multivariable}
+gdp_per_capital_growth <- read.csv('./Gapminder_project/GDPpercapitaconstant2000US/data.csv', sep = ',', head = TRUE)
+gdp_per_capital <- read.csv('./Gapminder_project/indicatorwdigdp_percapita_growth/data.csv', sep = ',', head = TRUE)
+gdp_per_employee <- read.csv('./Gapminder_project/indicator_gdp_per_employee/data.csv', sep = ',', head = TRUE)
+gdp_per_working_hour<- read.csv('./Gapminder_project/indicator_gdp_per_working_hour/data.csv', sep = ',', head = TRUE)
+
+agriculture<- read.csv('./Gapminder_project/agriculture_p_of_GDP/data.csv', sep = ',', head = TRUE)
+industry<- read.csv('./Gapminder_project/industry_p_of_GDP/data.csv', sep = ',', head = TRUE)
+
+foreign_inv_inflow<- read.csv('./Gapminder_project/foreign_investment_inflow/data.csv', sep = ',', head = TRUE)
+foreign_inv_outflow<- read.csv('./Gapminder_project/foreign_investment_outflow/data.csv', sep = ',', head = TRUE)
+investment<- read.csv('./Gapminder_project/investment/data.csv', sep = ',', head = TRUE)
+
+export<- read.csv('./Gapminder_project/exports_p_of_GDP/data.csv', sep = ',', head = TRUE)
 
 ```
+
+```{r}
+colnames(gdp_per_capital_growth)[1] <- 'country'
+colnames(gdp_per_capital)[1] <- 'country'
+colnames(gdp_per_employee)[1] <- 'country'
+colnames(gdp_per_working_hour)[1] <- 'country'
+
+per_capital_growth <- gdp_per_capital_growth %>%
+  gather('year', 'per_capital_growth', 2:53)
+per_capital_growth$year <- gsub('X', '', per_capital_growth$year)
+
+per_capital <- gdp_per_capital %>%
+  gather('year', 'per_capital', 2:53)
+per_capital$year <- gsub('X', '', per_capital$year)
+
+per_employee <- gdp_per_employee %>%
+  gather('year', 'per_employee', 2:29)
+per_employee$year <- gsub('X', '', per_employee$year)
+
+per_working_hour <- gdp_per_working_hour %>%
+  gather('year', 'per_working_hour', 2:29)
+per_working_hour$year <- gsub('X', '', per_working_hour$year)
+
+```
+
+```{r us GDP per factors (capital, capital growth, employee, working hour)}
+us_gdp_factors <- left_join(subset(per_capital, country=='United States'), subset(per_capital_growth, country=='United States'), by = 'year')
+us_gdp_factors <- left_join(us_gdp_factors, subset(per_employee, country=='United States'))
+us_gdp_factors <- left_join(us_gdp_factors, subset(per_working_hour, country=='United States'))
+```
+
+```{r}
+cor.test(us_gdp_factors$per_capital, us_gdp_factors$per_capital_growth)
+cor.test(us_gdp_factors$per_capital, us_gdp_factors$per_employee)
+cor.test(us_gdp_factors$per_capital, us_gdp_factors$per_working_hour)
+cor.test(us_gdp_factors$per_capital_growth, us_gdp_factors$per_employee)
+cor.test(us_gdp_factors$per_capital_growth, us_gdp_factors$per_working_hour)
+
+```
+# -0.2505442, 0.118675, 0.09153776, 0.9957948, 0.9860283, 
+```{r}
+summary(us_gdp_factors$per_capital)
+us_gdp_factors$per_capital.bucket <- cut(us_gdp_factors$per_capital, breaks = c(-5, 0, 2, 7))
+```
+
+```{r}
+p1 <- ggplot(aes(x=year, y=per_capital_growth), data=us_gdp_factors) + 
+  geom_point(aes(color=per_capital.bucket)) 
+  
+p2 <- ggplot(aes(x=year, y=per_working_hour), data=us_gdp_factors) + 
+  geom_point(aes(color=per_capital.bucket)) 
+
+p3 <- ggplot(aes(x=year, y=per_employee), data=us_gdp_factors) + 
+  geom_point(aes(color=per_capital.bucket)) 
+
+grid.arrange(p1, p2, p3)
+
+ggsave('us_GDP_per_factors.png')
+
+```
+# For US, GDP per capital growth but not GDP per capital is highly coorelated to GDP per employee and GDP per working hour.  That means GDP per capital growth manifast through employees work and working hour.  
+# GDP per employee is highly coorelated to GDP per working hour.
+# If GDP per capital is negative, GDP per capital growth would stay flat or decrease.
+
+```{r - investment, foreign investment inflow, foreign investment outflow}
+colnames(foreign_inv_inflow)[1] <- 'country'
+colnames(foreign_inv_outflow)[1] <- 'country'
+colnames(investment)[1] <- 'country'
+
+foreign_inv_outflow<- foreign_inv_outflow %>%
+  gather('year', 'foreign_outflow', 2:53)
+foreign_inv_outflow$year <- gsub('X', '', foreign_inv_outflow$year)
+
+foreign_inv_inflow<- foreign_inv_inflow %>%
+  gather('year', 'foreign_inflow', 2:43)
+foreign_inv_inflow$year <- gsub('X', '', foreign_inv_inflow$year)
+
+investment<- investment %>%
+  gather('year', 'investment', 2:53)
+investment$year <- gsub('X', '', investment$year)
+
+us_investment_foreign <- left_join(subset(foreign_inv_inflow, country=='United States'), subset(foreign_inv_outflow, country=='United States'), by = 'year')
+us_investment_foreign <- left_join(us_investment_foreign, subset(investment, country=='United States'), by = 'year')
+
+china_investment_foreign <- left_join(subset(foreign_inv_inflow, country=='China'), subset(foreign_inv_outflow, country=='China'), by = 'year')
+china_investment_foreign <- left_join(china_investment_foreign, subset(investment, country=='China'), by = 'year')
+
+investment_and_foreign_IO <- bind_rows(us_investment_foreign, china_investment_foreign)
+
+investment_and_foreign_IO[c("foreign_outflow", "foreign_inflow")][is.na(investment_and_foreign_IO[c("foreign_outflow", "foreign_inflow")])] <- 0
+
+investment_and_foreign_IO <- subset(investment_and_foreign_IO, select = -c(country.x, country.y))
+
+investment_and_foreign_IO$net_in <- as.numeric(us_investment_foreign$foreign__inflow) - as.numeric(us_investment_foreign$foreign_outflow)
+
+investment_and_foreign_IO <- investment_and_foreign_IO %>%
+  mutate(net_in = as.numeric(foreign_inflow) - as.numeric(foreign_outflow))
+  
+```
+
+```{r}
+ggplot(aes(x=year, y=investment, fill=country), data=investment_and_foreign_IO) +
+  geom_bar(stat='identity')
+ggsave('us_and_china_investment_comparision.png')
+```
+# China has higher level of investment than US, double US amount in general.
+
+```{r - US and China net inflow comparison plot}
+inflow <- ggplot(aes(x = year, y=foreign_inflow, fill=country), data=investment_and_foreign_IO) + 
+  geom_histogram(stat = 'identity') +
+  geom_point(aes(y=investment,color=country))
+
+outflow <- ggplot(aes(x = year, y=foreign_outflow, fill=country), data=investment_and_foreign_IO) + 
+  geom_histogram(stat = 'identity') +
+  geom_point(aes(y=investment,color=country))
+
+grid.arrange(inflow, outflow)
+ggsave('us_china_inflow_outflow_comparison.png')
+
+
+ggplot(aes(x = year, y=foreign_inflow, fill=country), data=investment_and_foreign_IO) + 
+  geom_histogram(stat = 'identity') +
+  geom_point(aes(y=investment,color=country))
+
+ggplot(aes(x = year, y=foreign_outflow, fill=country), data=investment_and_foreign_IO) + 
+  geom_histogram(stat = 'identity') +
+  geom_point(aes(y=investment,color=country))
+
+ggplot(aes(x=year, y=net_in, fill=country), data=investment_and_foreign_IO) + geom_histogram(stat = 'identity') 
+
+ggsave('us_china_foreign_inv_net_inflow.png')
+
+```
+
+# Foreign investment inflow in China started 1982.  By 1993, the inflow amount increase 10 fold.  China has been having positive net foreign direct investment inflow since 1982 while US has periods of alternating positive and negative net inflow.  China's foreign direct investment netinflow reached its peak in 1994, has since been taking a downtrend although is still positive.
+
+```{r - agriculture, industry, export, foreign direct investment}
+colnames(agriculture)[1] <- 'country'
+colnames(industry)[1] <- 'country'
+colnames(export)[1] <- 'country'
+
+
+agriculture <- agriculture %>%
+  gather('year', 'agriculture', 2:53)
+agriculture$year <- gsub('X', '', agriculture$year)
+
+industry <- industry %>%
+  gather('year', 'industry', 2:53)
+industry <- gsub('X', '', industry$year)
+
+export <- export %>%
+  gather('year', 'export', 2:53)
+export$year <- gsub('X', '', export$year)
+
+
+```
+
+```{r}
+us_factors_p_of_GDP <- left_join(subset(agriculture, country=='United State'), subset(industry,  country=='United State'), by = 'year')
+us_factors_p_of_GDP <- left_join(us_factors_p_of_GDP, subset(foreign_direct_inv,  country=='United State'))
+us_factors_p_of_GDP <- left_join(us_factors_p_of_GDP, subset(export,  country=='United State'))
+
+```
+
+
+
+
