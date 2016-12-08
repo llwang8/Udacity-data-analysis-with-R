@@ -1,6 +1,6 @@
 Lesson 3
 ========================================================
-
+### Explore One Variable
 ***
 
 ### What to Do First?

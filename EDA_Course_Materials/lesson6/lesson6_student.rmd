@@ -1,5 +1,6 @@
 Lesson 6
 ========================================================
+### Diamonds and Price Prediction
 
 ### Welcome
 # Notes:

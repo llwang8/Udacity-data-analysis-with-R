@@ -1,30 +1,1069 @@
 ---
-title: "Final Project"
+title: "White Wine Quality Exploration"
 author: "Li Wang"
 date: "12/1/2016"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#install.packages("ggplot2", dependencies = T) 
+require(ggplot2)
+#install.packages("knitr", dependencies = T)
+#install.packages("dplyr", dependencies = T)
+library(dplyr)
+#install.packages('tidyr')
+library(tidyr)
+#install.packages("gridExtra")
+library("gridExtra")
+library(reshape2)
+#install.packages("psych")
+library(psych)
+#install.packages("corrplot")
+library(corrplot)
+library(memisc)
+```
+## 1. Abstract
+
+The purpose of this project is to determine what physicochemical properties affect white wine quality through exploratory data analysis of a data set containing attributes for approximately 5,000 white variants of the Portuguese "Vinho Verde" wine.  
+
+For more details about the wine, consult: [Cortez et al., 2009](http://www.vinhoverde.pt/en/ or the reference).  Due to privacy and logistic issues, only physicochemical (inputs) and sensory (the output) variables are available (e.g. there is no data about grape types, wine brand, wine selling price, etc.).
+
+## 2. Dataset
+
+This data set consists of 12 variables, with almost 5,000 observations.
+
+Input variables (based on physicochemical tests):
+ 1 - fixed acidity (tartaric acid - g / dm^3)
+ 2 - volatile acidity (acetic acid - g / dm^3)
+ 3 - citric acid (g / dm^3)
+ 4 - residual sugar (g / dm^3)
+ 5 - chlorides (sodium chloride - g / dm^3)
+ 6 - free sulfur dioxide (mg / dm^3)
+ 7 - total sulfur dioxide (mg / dm^3)
+ 8 - density (g / cm^3)
+ 9 - pH
+ 10 - sulphates (potassium sulphate - g / dm3)
+ 11 - alcohol (% by volume)
+ 
+Output variable (based on sensory data): 
+ 12 - quality (score between 0 and 10)
+
+## 3. Exploratory Analysis
+
+### 3.1 Dataset Preparation and Transformation
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+white <- read.csv('wineQualityWhites.csv', sep = ',', header = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+dim(white)
+str(white)
+summary(white)
+```
+
+```{r}
+# Define original variable names
+ORIGINAL <- colnames(white)
+# Define independent variable names
+INDEPENDENT <- colnames(white)[1:11]
+
+#corrplot.mixed(cor(white[, ORIGINAL]))
+```
+
+```{r}
+white$quality.f2 <- ifelse(white$quality == 3 | 
+                          white$quality == 4 | 
+                          white$quality == 5, 
+                        "bad", 
+                        ifelse(white$quality == 6, 
+                               "normal",
+                               "good"))
+white$quality.f2 <- factor(white$quality.f2, levels=c("bad", "normal", "good"))
+table(white$quality.f2)
+
+```
+Create a new variable quality.f2 which has fewer quality levels and see if it can provide new insights.
+
+```{r include=FALSE}
+#ggplot(aes(x=density.bucket), data=white) + geom_histogram(stat = 'count')
+white$density.bucket <- cut(white$density, breaks = c(0.985, 0.990, 0.992, 0.994, 0.996, 0.998, 1.0))
+table(white$density.bucket)
+```
+
+```{r include=FALSE}
+length(which(white$quality == 0))
+length(which(white$quality >= 8))
+length(which(white$quality <= 4))
+#There is no wine in the dataset without  a quality rating.  There are about equal amount of best quality wines and worst quality ones.
+```
+
+
+### 3.2 Univariate Plots Section
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE }
+#p1 <- ggplot(aes(x=fixed.acidity), data=white) + geom_histogram()
+#p2 <- ggplot(aes(x=volatile.acidity), data=white) + geom_histogram()
+#p3 <- ggplot(aes(x=citric.acid), data=white) + geom_histogram()
+#p4 <- ggplot(aes(x=residual.sugar), data=white) + geom_histogram()
+#p5 <- ggplot(aes(x=chlorides), data=white) + geom_histogram()
+#p6 <- ggplot(aes(x=free.sulfur.dioxide), data=white) + geom_histogram()
+#p7 <- ggplot(aes(x=total.sulfur.dioxide), data=white) + geom_histogram()
+#p8 <- ggplot(aes(x=density), data=white) + geom_histogram()
+#p9 <- ggplot(aes(x=pH), data=white) + geom_histogram()
+#p10 <- ggplot(aes(x=sulphates), data=white) + geom_histogram()
+#p11 <- ggplot(aes(x=alcohol), data=white) + geom_histogram()
+#p12 <- ggplot(aes(x=quality), data=white) + geom_histogram()
+#grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, ncol = 3)
+
+```
+
+```{r include=FALSE}
+#dens <- lapply(ORIGINAL, FUN=function(var) {
+#  ggplot(white, aes_string(x=var)) + 
+#    geom_density(fill='gray') +
+#    geom_vline(aes(xintercept=mean(white[, var])), color='blue', size=1) +
+#    geom_vline(aes(xintercept=median(white[, var])), color='red', size=1) +
+#    geom_vline(aes(xintercept=quantile(white[, var], 0.25)), 
+#               linetype='dashed', size=0.5) + 
+#    geom_vline(aes(xintercept=quantile(white[, var], 0.75)), 
+#               linetype='dashed', size=0.5)
+#  })
+#do.call(grid.arrange, args=c(dens, list(ncol=3)))
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+q <- ggplot(aes(x=quality, fill=quality), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$quality)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$quality)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$quality, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$quality, 0.75)), 
+               linetype='dashed', size=0.5)
+  #geom_histogram(aes(fill=..count..)) +
+  #scale_fill_gradient("Count", low = "yellow", high = "red")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+a <- ggplot(aes(x=alcohol), data=white) +  ylab('') +
+  geom_density(fill='gray') +
+  geom_vline(aes(xintercept=mean(white$alcohol)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$alcohol)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$alcohol, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$alcohol, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(bins = 60, fill='#660066') 
+
+#summary(white$alcohol)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+d <- ggplot(aes(x=density), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$density)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$density)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$density, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$density, 0.75)), 
+               linetype='dashed', size=0.5)
+  #geom_histogram(bins = 50, fill='#0000cc')
+
+#summary(white$density)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+rs <- ggplot(aes(x=residual.sugar), data=white) + 
+  geom_density(fill='gray') +  ylab('') +
+  geom_vline(aes(xintercept=mean(white$residual.sugar)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$residual.sugar)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$residual.sugar, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$residual.sugar, 0.75)), 
+               linetype='dashed', size=0.5)
+  #geom_histogram(fill='#990000') + xlim(0, 20)
+ 
+#summary(white$residual.sugar)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+c <- ggplot(aes(x=chlorides), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$chlorides)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$chlorides)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$chlorides, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$chlorides, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(fill='#339966') + xlim(0, 0.1)
+#summary(white$chlorides)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+ts <- ggplot(aes(x=total.sulfur.dioxide), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$total.sulfur.dioxide)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$total.sulfur.dioxide)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$total.sulfur.dioxide, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$total.sulfur.dioxide, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(fill='#cccc00') + xlim(0, 265)
+#summary(white$total.sulfur.dioxide)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+fs <- ggplot(aes(x=free.sulfur.dioxide), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$free.sulfur.dioxide)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$free.sulfur.dioxide)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$free.sulfur.dioxide, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$free.sulfur.dioxide, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(fill='#ffcc00') + xlim(0, 100)
+#ggplot(aes(x=free.sulfur.dioxide), data=white) + geom_histogram() + scale_x_log10()
+summary(white$free.sulfur.dioxide)
+```
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE }
+#### fixed.Acidity
+fa <- ggplot(aes(x=fixed.acidity), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$fixed.acidity)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$fixed.acidity)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$fixed.acidity, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$fixed.acidity, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(binwidth = 0.1, fill="blue") 
+#summary(white$fixed.acidity)
+```
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE }
+va <- ggplot(aes(x=volatile.acidity), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$volatile.acidity)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$volatile.acidity)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$volatile.acidity, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$volatile.acidity, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(fill='#660099') + xlim(0, 0.9)
+#summary(white$volatile.acidity)
+```
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE }
+ca <- ggplot(aes(x=citric.acid), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$citric.acid)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$citric.acid)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$citric.acid, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$citric.acid, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(fill='#66cc33') + 
+  xlim(0, 0.75)
+#summary(white$citric.acid)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+ph <- ggplot(aes(x=pH), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$pH)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$pH)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$pH, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$pH, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram()
+#summary(white$pH)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+s <- ggplot(aes(x=sulphates), data=white) + 
+  geom_density(fill='gray') + ylab('') +
+  geom_vline(aes(xintercept=mean(white$sulphates)), color='blue', size=1) +
+  geom_vline(aes(xintercept=median(white$sulphates)), color='red', size=1) +
+  geom_vline(aes(xintercept=quantile(white$sulphates, 0.25)), 
+               linetype='dashed', size=0.5) + 
+  geom_vline(aes(xintercept=quantile(white$sulphates, 0.75)), 
+               linetype='dashed', size=0.5)
+#geom_histogram(bins=50, fill='#996633')
+#summary(white$sulphates)
+```
+Density of Independent Variables
+```{r}
+grid.arrange(q, a, d, rs, c, ts, fs, fa, va, ca, ph, s, ncol=3)
+```
+
+Most wines are grade 5, 6, 7.
+
+Alcohol level skews to the lower end of the distribution range. 
+
+Density of water depends on the percent alcohol and sugar content.
+
+There is a large count of wine variants contain less than 2 g per dm^3.  I wonder what kind of quality of those wine.
+
+chlorides is the amount of salt in the wine. Median amount is 0.043 g per dm^3.
+
+Total Sulfur Dioxide (S02) in low concentrations is mostly undetectable in wine, but at free SO2 concentrations over 50 ppm, SO2 becomes evident in the nose and taste of wine. Most wines contain less than 260 mg per dm^3.
+
+Free Sulfur Dioxide prevents microbial growth and the oxidation of wine. Its amount ranges from 2 to 289 but most fall under 62 mg per dm^3.
+
+Fixed Acidity refers to most acids involved with wine or fixed or nonvolatile (do not evaporate readily).  Most fall between 6 and 7.3 g per dm^3.
+
+Volatile Acidity amount skew to the lower end because too high of its levels can lead to an unpleasant, vinegar taste.  Median level is 0.26 g per dm^3.  I wonder if volatile acidity amount is related to wine quality.
+
+Citric Acid found in small quantities, can add 'freshness' and flavor to wines. Most white wine contain 0.2 to 0.4 per dm^3. 
+
+pH describes how acidic or basic a wine is on a scale from 0 (very acidic) to 14 (very basic); most wines are between 3-3.4 on the pH scale
+
+Sulphates is a wine additive which can contribute to sulfur dioxide gas (S02) levels, which acts as an antimicrobial and antioxidant.  Sulphates additive skew to the right lower end of the distribution range.
+
+
+### 3.3 Univariate Analysis
+
+Structure of data set:
+
+There are 4898 white wine observations in the data set with 12 features.  The variables quality is ordered factor variables with the following levels.
+
+(worst) 1 —————-> (best) 12
+
+Other Observations:
+
+The main features in the data set are density, alcohol and quality. I’d like to determine which features are best for predicting the quality of wine. I suspect acidity and some combination of the other variables can be used to build a predictive model to determine quality of wine.
+
+Fixed acidity, volatile acidity, residual sugar, chlorides, total sulfur.dioxide could also contribute to the quality of wine. 
+
+There is high count of certain low level residual sugar of around 2.
+
+
+### 3.4 Bivariate Plots Section
+
+```{r}
+white2 <- white[c(-1, -4, -7, -11)]
+
+#cor(white2)
+lowerCor(white2[sapply(white2, is.numeric)])
+# pairs.panels(white)
+pairs.panels(white2)
+ggsave('pairs_panels_whites.png')
+```
+Based on correlation study, citric acid, free SCO2, sulphate are not correlated to quality, fixed acidity, residual sugar, pH are weakly correlated to quality.  My study will concentrate on how volatile acidity, chloride, total SCO2, alcohol, density would affect wine quality.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_alcohol <- ggplot(aes(x=alcohol), data=subset(white, quality >= 8)) + geom_histogram(bins=60, fill='#660066') +  
+  xlim(7.5, 14) + ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_alcohol<- ggplot(aes(x=alcohol), data=subset(white, quality <= 4)) + geom_histogram(bins=60, fill='#993399') +  
+  xlim(7.5, 14) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_density <- ggplot(aes(x=density), data=subset(white, quality >= 8)) + geom_histogram(bins=40, fill='#3333cc')  + ggtitle('Best Quality Wine')+
+  theme(plot.title = element_text(size = 10))
+pw_density<- ggplot(aes(x=density), data=subset(white, quality <= 4)) + geom_histogram(bins=40, fill='#0000ff')  + ggtitle('Worst Quality Wine')+
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_sugar <- ggplot(aes(x=residual.sugar), data=subset(white, quality >= 8)) + geom_histogram(bins=60, fill='#660000') + 
+  xlim(0, 17) + ggtitle('Best Quality Wine')+
+  theme(plot.title = element_text(size = 10))
+pw_sugar<- ggplot(aes(x=residual.sugar), data=subset(white, quality <= 4)) + geom_histogram(bins=60, fill='#993366') + 
+  xlim(0, 17) + ggtitle('Worst Quality Wine')+
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_tso2 <- ggplot(aes(x=total.sulfur.dioxide), data=subset(white, quality >= 8)) + geom_histogram(bins=40, fill='#999900') + xlim(0, 250) + 
+  ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_tso2<- ggplot(aes(x=total.sulfur.dioxide), data=subset(white, quality <= 4)) + geom_histogram(bins=40, fill='#cccc00') + xlim(0, 250) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_fso2 <- ggplot(aes(x=free.sulfur.dioxide), data=subset(white, quality >= 8)) + geom_histogram(bins=30, fill='#cc9900') + scale_x_log10(limits=c(5, 100)) + ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_fso2<- ggplot(aes(x=free.sulfur.dioxide), data=subset(white, quality <= 4)) + geom_histogram(bins=30, fill='#ffcc00') + scale_x_log10(limits=c(5, 100)) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+pb_chlorides <- ggplot(aes(x=chlorides), data=subset(white, quality >= 8)) + geom_histogram(bins=60, fill='#006633') + xlim(0, 0.1) + ggtitle('Best Quality Wine')+
+  theme(plot.title = element_text(size = 10))
+pw_chlorides<- ggplot(aes(x=chlorides), data=subset(white, quality <= 4)) + geom_histogram(bins=60, fill='#339966') + xlim(0, 0.1) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_facid <- ggplot(aes(x=fixed.acidity), data=subset(white, quality >= 8)) + geom_histogram(bins=40, fill='#6666FF') + xlim(3.5, 10) + 
+  ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_facid<- ggplot(aes(x=fixed.acidity), data=subset(white, quality <= 4)) + geom_histogram(bins=40, fill='#0099ff') + xlim(3.5, 10) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+
+#The level of fixed acidity in most best quality wine fall within narrow range of 5 to 8 g / dm^3, while the level for worst quality wine fall within 5 to 10 g / dm^3.
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_vacid <- ggplot(aes(x=volatile.acidity), data=subset(white, quality >= 8)) + geom_histogram(bins=60, fill='#660099') + 
+  xlim(0.1, 0.75) + ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_vacid<- ggplot(aes(x=volatile.acidity), data=subset(white, quality <= 4)) + geom_histogram(bins=60, fill='#9933ff') + 
+  xlim(0.1, 0.75) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+
+#There is no distribution difference for volatile acidity amount between best quality wines or worse ones. Best quality wines tend to have less than 0.5 g / dm^3 acetic acid.
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_cacid <- ggplot(aes(x=citric.acid), data=subset(white, quality >= 8)) + geom_histogram(bins=40, fill='#339900') + xlim(0, 0.75) + ggtitle('Best Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+pw_cacid<- ggplot(aes(x=citric.acid), data=subset(white, quality <= 4)) + geom_histogram(bins=40, fill='#66cc33') + xlim(0, 0.75) + ggtitle('Worst Quality Wine') +
+  theme(plot.title = element_text(size = 10))
+
+#Best quality wines tend to have consitant citric acid amout, falling within a narrow range of 0.22 to 0.5 g / dm^3.
+```
+
+```{r include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+pb_ph <- ggplot(aes(x=pH), data=subset(white, quality >= 8)) + geom_histogram(bins=90) + xlim(2.75, 3.75)  + ggtitle('Best Quality Wine')
+pw_ph<- ggplot(aes(x=pH), data=subset(white, quality <= 4)) + geom_histogram(bins=90, fill='#999999')  + xlim(2.75, 3.75)  + ggtitle('Worst Quality Wine')
+
+#There is no different of pH distribution between Best Quality Wine and Worst Quality Wine.
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+pb_sulphates <- ggplot(aes(x=sulphates), data=subset(white, quality >= 8)) + geom_histogram(bins=40, fill='#663300') + xlim(0.15, 1.0)  + ggtitle('Best Quality Wine')
+pw_sulphates<- ggplot(aes(x=sulphates), data=subset(white, quality <= 4)) + geom_histogram(bins=40, fill='#996633') + xlim(0.15, 1.0)  + ggtitle('Worst Quality Wine')
+
+#Sulphate level distribution has not much difference between best quality wines and worse ones.
+```
+
+```{r}
+grid.arrange(pb_alcohol, pb_density, pb_sugar, pb_chlorides,
+             pw_alcohol, pw_density, pw_sugar, pw_chlorides, 
+             pb_tso2, pb_vacid, pb_fso2, pb_ph,
+             pw_tso2, pw_vacid, pw_fso2, pw_ph, ncol=4)
+
+```
+Most best quality wine tends to have higher level of alcohol range from 10.5 to 13.5 % by volume, while most worst quality wine alcohol level range from 8 to 12 % by volume with bi-modal distribution.
+
+Density distribution for most best quality wines has a narrow range.
+
+There is no significant distribution difference for residual sugar amount between best quality wines or worse ones, although more variants of worst quality wines tend to have low level residual sugar.
+
+Total sulfur dioxide amount in most best quality wine falls in a narrow range of 70 to 190, while that in most worst quality wine falls in the range of 5 to 250.
+
+The amount of free sulfur dioxide in Worst quality wine skews to lower level. After log transformation, its distribution for worst quality wines shows bi-modal while that for best quality wine stays in a higher range.
+
+There is no significant difference of Chlorides distribution between Best Quality Wine and Worst Quality Wine.  The same is true for pH.
+
+#### Quality
+
+```{r include=FALSE}
+cor(white$alcohol, white$quality)^2
+cor(white$density, white$quality)^2
+cor(white$chlorides, white$quality)^2
+cor(white$volatile.acidity, white$quality)^2
+cor(white$total.sulfur.dioxide, white$quality)^2
+cor(white$fixed.acidity, white$quality)^2
+cor(white$residual.sugar, white$quality)^2
+cor(white$pH, white$quality)^2
+cor(white$sulphates, white$quality)^2
+cor(white$citric.acid, white$quality)^2
+cor(white$free.sulfur.dioxide, white$quality)^2
+```
+
+```{r}
+# factors vs. quality
+a_q <- ggplot(aes(y=alcohol, x=quality, group=quality), data=white) + geom_boxplot()
+ch_q <- ggplot(aes(y=chlorides, x=quality, group=quality), data=white) + geom_boxplot()
+t_q <- ggplot(aes(y=total.sulfur.dioxide, x=quality, group=quality), data=white) + geom_boxplot()
+d_q <- ggplot(aes(y=density, x=quality, group=quality), data=white) + geom_boxplot()
+rs_q <- ggplot(aes(y=residual.sugar, x=quality, group=quality), data=white) + geom_boxplot()
+fr_q <- ggplot(aes(y=free.sulfur.dioxide, x=quality, group=quality), data=white) + geom_boxplot()
+grid.arrange(a_q, ch_q, t_q, d_q, rs_q, fr_q, ncol=3 )
+```
+
+
+```{r}
+a_qf2 <- ggplot(white, aes(alcohol, fill=quality.f2)) +
+  geom_density() +
+  xlim(8, 14) +
+  ylab('')
+
+d_qf2 <- ggplot(white, aes(x=density, fill=quality.f2)) + 
+  geom_density(alpha=0.3) +
+  xlim(0.986, 1.005) +
+  ylab('')
+
+grid.arrange(a_qf2, d_qf2, ncol=2)
+```
+
+
+```{r include=FALSE}
+by(white$alcohol, white$quality, summary)
+alcohol.lm = lm(alcohol ~ quality, data=white)
+summary(alcohol.lm)
+```
+Best quality wines have highest median alcohol level and wider range.
+
+```{r include=FALSE}
+by(white$density, white$quality, summary)
+density.lm = lm(density ~ quality, data=white)
+summary(density.lm)
+```
+Best quality wines have lowest median density and smallest range.
+
+```{r include=FALSE}
+sugar.lm = lm(residual.sugar ~ quality, data=white)
+summary(sugar.lm)
+```
+
+```{r include=FALSE}
+by(white$chlorides, white$quality, summary)
+chlorides.lm = lm(chlorides ~ quality, data=white)
+summary(chlorides.lm)
+```
+Median Chlorides amount for best quality wines is slightly lower than other grade of wines.  
+
+
+#### Alcohol
+
+```{r include=FALSE}
+cor(white$density, white$alcohol)^2
+cor(white$residual.sugar, white$alcohol)^2
+cor(white$total.sulfur.dioxide, white$alcohol)^2
+cor(white$chlorides, white$alcohol)^2
+cor(white$fixed.acidity, white$alcohol)^2
+cor(white$pH, white$alcohol)^2
+```
+
+```{r include=FALSE}
+coef(lm(density ~ alcohol, data=white))
+coef(lm(residual.sugar ~ alcohol, data=white))
+coef(lm(total.sulfur.dioxide ~ alcohol, data=white))
+coef(lm(chlorides ~ alcohol, data=white))
+```
+
+```{r}
+# factors vs. alcohol
+d_a <- ggplot(aes(x=alcohol, y=density, colour=density), data=white) + 
+  geom_point() + scale_colour_gradientn(colours=rainbow(4)) +
+  geom_abline(intercept = 1.014, slope = -0.0019)
+
+rs_a <- ggplot(aes(x=alcohol, y=residual.sugar, colour=residual.sugar), data=white) + scale_colour_gradientn(colours=rainbow(4)) +
+  geom_point(alpha=1/10) + ylim(0, 40) + 
+  geom_abline(intercept = 25.9, slope = -1.86)
+
+t_a <- ggplot(aes(x=alcohol, y=total.sulfur.dioxide, color=total.sulfur.dioxide), data=white) + 
+  geom_point() + scale_colour_gradientn(colours=rainbow(4)) +
+  geom_abline(intercept = 301.4, slope = -15.5)
+
+c_a <- ggplot(aes(x=alcohol, y=chlorides, color=chlorides), data=white) + 
+  geom_point() + scale_colour_gradientn(colours=rainbow(4)) +
+  geom_abline(intercept = 0.11, slope = -0.006)
+
+grid.arrange(d_a, rs_a, t_a, c_a, ncol=2)
+```
+Alcohol is strongly correlated to density, and weakly correlated to residual sugar, total sulfur dioxide, and chlorides.
+
+
+#### Density
+
+```{r include=FALSE}
+cor(white$residual.sugar, white$density)^2
+cor(white$alcohol, white$density)^2
+cor(white$total.sulfur.dioxide, white$density)^2
+cor(white$free.sulfur.dioxide, white$density)^2
+cor(white$fixed.acidity, white$density)^2
+cor(white$chlorides, white$density)^2
+cor(white$volatile.acidity, white$density)^2
+```
+
+```{r include=FALSE}
+coef(lm(residual.sugar ~ density, data=white))
+coef(lm(total.sulfur.dioxide ~ density, data=white))
+coef(lm(chlorides ~ density, data=white))
+coef(lm(free.sulfur.dioxide ~ density, data=white))
+```
+
+```{r}
+# factors vs. density
+rs_d <- ggplot(aes(y=residual.sugar, x=density, colour=residual.sugar), data=white) + 
+  geom_point() + xlim(0.985, 1.02) +
+  geom_abline(intercept = -1408, slope = 1423)
+
+t_d <- ggplot(aes(y=total.sulfur.dioxide, x=density, colour= total.sulfur.dioxide), data=white) + 
+  geom_point() + xlim(0.985, 1.02) + 
+  geom_abline(intercept = -7346, slope = 7529)
+
+c_d <- ggplot(aes(y=chlorides, x=density, colour=chlorides), data=white) + 
+  geom_point() + xlim(0.985, 1.02) + 
+  geom_abline(intercept = -1.81, slope = 1.88)
+
+f_d <- ggplot(aes(y=free.sulfur.dioxide, x=density, colour=free.sulfur.dioxide), data=white) + 
+  geom_point() + xlim(0.985, 1.02) + 
+  geom_abline(intercept = -1628, slope = 1672)
+
+grid.arrange(rs_d, t_d, c_d, f_d)
+```
+Density is strongly correlated to residual sugar, and weakly correlated to chlorides, total sulfur dioxide, free sulfur dioxide.
+
+
+#### Residual Sugar
+```{r include=FALSE}
+coef(lm(density ~ residual.sugar, data=white))
+coef(lm(alcohol ~ residual.sugar, data=white))
+coef(lm(total.sulfur.dioxide ~ residual.sugar, data=white))
+```
+
+```{r}
+# factors vs. residual.sugar
+rs_d <-ggplot(aes(x=residual.sugar, y=density), data=white) + 
+  geom_point(alpha=1/10) +
+  geom_abline(intercept = 0.99, slope = 0.0005, color='purple')
+
+rs_a <- ggplot(aes(x=residual.sugar, y=alcohol), data=white) + 
+  geom_point(alpha=1/10) + ylim(0, 40) + 
+  geom_abline(intercept = 11.2, slope = -0.1, color='orange')
+
+rs_t <- ggplot(aes(x=residual.sugar, y=total.sulfur.dioxide), data=white) + 
+  geom_point(alpha=1/10) + 
+  geom_abline(intercept = 116.8, slope = 3.4, color='tan')
+
+rs_ph <- ggplot(aes(x=residual.sugar, y=pH), data=white) + geom_point(alpha=1/10)
+
+grid.arrange(rs_d, rs_a, rs_t, rs_ph, ncol=2)
+
+```
+Residual sugar level is strongly positively correlated to density, weakly negatively correlated to alcohol and positively correlated to total sulfur dioxide.  Residual sugar is not correlated to pH.
+
+
+#### Total Sulfur Dioxide
+
+```{r include=FALSE}
+coef(lm(density ~ total.sulfur.dioxide, data=white))
+coef(lm(alcohol ~ total.sulfur.dioxide, data=white))
+
+#total_so2.lm = lm(total.sulfur.dioxide ~ quality, data=white)
+#summary(total_so2.lm)
+```
+
+```{r}
+# factors vs. total.sulfur.dioxide
+d_t <- ggplot(aes(x=total.sulfur.dioxide, y=density, color=density), data=white) + 
+  geom_point(alpha=1/10, position = 'jitter') +
+  scale_colour_gradientn(colours=rainbow(4)) +
+  geom_abline(intercept = 0.99, slope = 0.00003, color='blue')
+
+a_t <- ggplot(aes(x=total.sulfur.dioxide, y=alcohol, color=alcohol), data=white) + 
+  geom_point(alpha=1/5) +
+  scale_colour_gradientn(colours=rainbow(4)) +
+  geom_abline(intercept = 12.31301, slope = -0.013, color='purple')
+
+grid.arrange(d_t, a_t, ncol=2)
+```
+Total sulfur dioxide is strongly correlated to alcohol.
+
+
+#### Chlorides
+
+```{r include=FALSE}
+coef(lm(density ~ chlorides, data=white))
+coef(lm(alcohol ~ chlorides, data=white))
+coef(lm(total.sulfur.dioxide ~ chlorides, data=white))
+
+```
+
+```{r}
+# factors vs. chlorides
+d_ch <- ggplot(aes(x=chlorides, y=density, color=density), data=white) + 
+  geom_point(alpha=1/5) +
+  scale_colour_gradientn(colours=rainbow(6)) 
+  #geom_abline(intercept = 0.992, slope = 0.035, color='blue')
+
+a_ch <- ggplot(aes(x=chlorides, y=alcohol, color=alcohol), data=white) + 
+  geom_point(alpha=1/5) +
+  scale_colour_gradientn(colours=rainbow(6)) 
+  #geom_abline(intercept = 11.44, slope = -20.288, color='red')
+
+t_ch <- ggplot(aes(x=chlorides, y=total.sulfur.dioxide, color=total.sulfur.dioxide), data=white) + 
+  geom_point(alpha=1/5) +
+  scale_colour_gradientn(colours=rainbow(6)) 
+  #geom_abline(intercept = 120.7, slope = 386.9, color='orange')
+
+grid.arrange(d_ch, a_ch, t_ch, ncol=3)
+
+```
+Chlorides is positively correlated to density although not a strong relationship.  Chlorides is slightly correlated to total.sulfur.dioxide.
+
+
+#### Fixed acidity
+
+```{r include=FALSE}
+coef(lm(density ~ fixed.acidity, data=white))
+coef(lm(pH ~ fixed.acidity, data=white))
+```
+
+```{r}
+# factors vs. fixed acidity
+d_fa<- ggplot(aes(x=fixed.acidity, y=density, color=density), data=white) + 
+  geom_point(alpha=1/10, position = 'jitter')  
+  #geom_abline(intercept = 0.98, slope = 0, color='red')
+
+ph_fa <- ggplot(aes(x=fixed.acidity, y=pH, color=pH), data=white) + 
+  geom_point(alpha=1/5) 
+  #geom_abline(intercept = 3.7, slope = -0.076, color='orange')
+
+grid.arrange(d_fa, ph_fa, ncol=2)
+```
+Fixed acidity is negatively correlated to pH and positively correlated to density weakly. 
+
+
+```{r include=FALSE}
+#### pH
+cor(white$fixed.acidity, white$pH)^2
+cor(white$residual.sugar, white$pH)^2
+cor(white$citric.acid, white$pH)^2
+cor(white$volatile.acidity, white$pH)^2
+#pH is weakly correlated to fixed acidity.
+```
+
+
+### 3.5 Bivariate Analysis
+
+```{r}
+#corrplot.mixed(cor(white[, ORIGINAL]))
+#lowerCor(white2[sapply(white2, is.numeric)])
+```
+
+Two more significant independent variables correlating to quality are alcohol and density. 
+
+In terms of relationships between independent variables, some strong correlations are observed.
+
+0.84 residual.sugar - density
+0.78 alcohol - density
+0.62 free.sulfur.dioxide - total.sulfur.dioxide
+0.53 total.sulfur.dioxide - density
+0.45 residual sugar - alcohol
+0.36 chloride - alcohol
+
+
+### 3.6 Multivariate Plots and Analysis 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(y=alcohol, x=density, color=quality), data=white) + 
+  geom_point() +
+  facet_wrap(~ quality.f2) +
+  scale_colour_gradientn(colours=rainbow(5))
+```
+Within the same range of density, best quality wines have highest level of alcohol.
 
 
 ```{r }
-# install.packages("ggplot2", dependencies = T) 
-install.packages("knitr", dependencies = T)
-# install.packages("dplyr", dependencies = T)```
+# Colored by simplified quality level
+rs.qf2 <- ggplot(white, aes(x=density, y=residual.sugar, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99)) + 
+  scale_color_brewer(type='div')
+# Colored by original quality level
+rs.qf <- ggplot(white, aes(x=density, y=residual.sugar, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99))
+
+# Colored by simplified quality level
+a.qf2 <- ggplot(white, aes(x=density, y=alcohol, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$alcohol), quantile(white$alcohol, prob=0.99))  + 
+  scale_color_brewer(type='div')
+# Colored by original quality level
+a.qf <- ggplot(white, aes(x=density, y=alcohol, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$alcohol), quantile(white$alcohol, prob=0.99))
+
+# Colored by simplified quality level
+t.qf2 <- ggplot(white, aes(x=density, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99))  + 
+  scale_color_brewer(type='div')
+# Colored by original quality level
+t.qf <- ggplot(white, aes(x=density, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99))
+
+grid.arrange(rs.qf2, rs.qf, a.qf2, a.qf, t.qf2, t.qf, ncol=2)
+```
+The above plot residual sugar, alcohol, and total sulfur dioxide against density separately.  The left column uses the simplified quality level and the right one uses the original quality level. In both kinds of plots, holding density (mostly from the lower end of density), higher  residual.sugar or alcohol, or total sulfur dioxide seem to have better quality respectively.
+
+
+```{r include=FALSE }
+# similiar plots with density.bucket.  Not very insightful.
+# Colored by simplified quality level
+rs.dbqf2 <- ggplot(white, aes(x=density.bucket, y=residual.sugar, color=quality.f2)) +
+  geom_point(position='jitter')  
+# Colored by original quality level
+rs.dbqf <- ggplot(white, aes(x=density.bucket, y=residual.sugar, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer(type='seq') 
+
+# Colored by simplified quality level
+a.dbqf2 <- ggplot(white, aes(x=density.bucket, y=alcohol, color=quality.f2)) +
+  geom_point(position='jitter')    
+# Colored by original quality level
+a.dbqf <- ggplot(white, aes(x=density.bucket, y=alcohol, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer(type='seq') 
+
+# Colored by simplified quality level
+t.dbqf2 <- ggplot(white, aes(x=density.bucket, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point(position='jitter')  
+# Colored by original quality level
+t.dbqf <- ggplot(white, aes(x=density.bucket, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer(type='seq') 
+
+grid.arrange(rs.dbqf2, rs.dbqf, a.dbqf2, a.dbqf, t.dbqf2, t.dbqf, ncol=2)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r}
+# Colored by simplified quality level
+rsa.qf2 <- ggplot(white, aes(x=alcohol, y=residual.sugar, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99))
+# Colored by original quality level
+rsa.qf <- ggplot(white, aes(x=alcohol, y=residual.sugar, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99))
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Colored by simplified quality level
+ca.qf2 <- ggplot(white, aes(x=alcohol, y=chlorides, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) +
+  ylim(min(white$chlorides), quantile(white$chlorides, prob=0.99))
+# Colored by original quality level
+ca.qf <- ggplot(white, aes(x=alcohol, y=chlorides, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) +
+  ylim(min(white$chlorides), quantile(white$chlorides, prob=0.99))
+
+grid.arrange(rsa.qf2, rsa.qf, ca.qf2, ca.qf, ncol=2)
+```
+The above plot residual sugar, chlorides against alcohol separately.  The left column uses the simplified quality level and the right one uses the original quality level. In both kinds of plots, holding residual.sugar or chlorides respectively, higher alcohol level seem to have better quality.
+
+
+```{r}
+# Colored by simplified quality level
+ft.qf2 <- ggplot(white, aes(x=free.sulfur.dioxide, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  xlim(min(white$free.sulfur.dioxide), quantile(white$free.sulfur.dioxide, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99))
+# Colored by original quality level
+ft.qf <- ggplot(white, aes(x=free.sulfur.dioxide, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$free.sulfur.dioxide), quantile(white$free.sulfur.dioxide, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99))
+
+grid.arrange(ft.qf2, ft.qf, ncol=2)
+```
+Looking at the above plots, it seems that there are more better quality wine under 150 g dm^3 total sulfur dioxide. 
+
+
+## 4. Linear Regression
+
+Based on the exploratory analysis in the previous section, there does not seem to be any simple linear relationship between quality and physicochemical properties. If this observation is correct, linear regression model would not perform so well in terms of quality prediction by physicochemical properties.
+
+```{r}
+m1 <- lm(I(alcohol) ~ I(quality), data = white)
+m2 <- update(m1, ~ . + density)
+#m3 <- update(m2, ~ . + residual.sugar)
+#m4 <- update(m3, ~ . + total.sulfur.dioxide)
+#m5 <- update(m4, ~ . + chlorides)
+mtable(m1,m2)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+m1 <- lm(I(density) ~ I(quality), data = white)
+m2 <- update(m1, ~ . + alcohol)
+#m3 <- update(m2, ~ . + residual.sugar)
+#m4 <- update(m3, ~ . + total.sulfur.dioxide)
+#m5 <- update(m4, ~ . + chlorides)
+mtable(m1,m2)
+```
+Looking at the statistics summary of two linear model.  It seems that only 20% of variance of quality is explained by alcohol, 10 % by density.  The rest of the result do not make sense.  Linear model is not a suitable approach to predict quality.
+
+
+## 5.Final Plots and Summary
+
+```{r}
+ggplot(aes(x=quality, y=alcohol, group=quality, fill=quality), data=white) + 
+  geom_boxplot() +
+  ggtitle("Alcohol vs. Quality") + 
+  xlab("Quality)") +
+  ylab("Alcohol (% by volume)") +
+  theme(title=element_text(size=14, face='bold'),
+      axis.title=element_text(size=12), 
+      axis.text=element_text(size=10),
+      legend.text=element_text(size=10))
+
+```
+Best quality wines have highest median alcohol level.
+
+```{r}
+a_qf2 <- ggplot(white, aes(alcohol, fill=quality.f2)) +
+  geom_density() +
+  xlim(8, 14) +
+  guides(fill=guide_legend(title="Quality", reverse=T)) +
+  ggtitle("Distribution of Alcohol by Quality Level") + 
+  xlab("Alcohol (%/ml)") +
+  ylab("") 
+
+d_qf2 <- ggplot(white, aes(x=density, fill=quality.f2)) + 
+  geom_density(alpha=0.3) +
+  xlim(0.986, 1.005) +
+  guides(fill=guide_legend(title="Quality", reverse=T)) +
+  ggtitle("Distribution of Density by Quality Level") + 
+  xlab("Density (g/ml)") +
+  ylab("")
+
+grid.arrange(a_qf2, d_qf2, ncol=2)
+```
+
+This is a density plot of density and alcohol by quality level. As quality goes up, the center of distribution of density gets smaller, that of alcohol gets higher.
+
+
+```{r}
+# Colored by simplified quality level
+rs.qf2 <- ggplot(white, aes(x=density, y=residual.sugar, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  scale_color_brewer(type = 'div') +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99)) +
+  ggtitle("Residual Sugar vs. Density per Quality Factor") + 
+  xlab("Density (g/ml)") +
+  ylab("Residual Sugar (g / dm^3)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+
+# Colored by original quality level
+rs.qf <- ggplot(white, aes(x=density, y=residual.sugar, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$residual.sugar), quantile(white$residual.sugar, prob=0.99)) +
+  ggtitle("Residual Sugar vs. Density per Quality Level") + 
+  xlab("Density (g/ml)") +
+  ylab("Residual Sugar (g / dm^3)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+
+# Colored by simplified quality level
+a.qf2 <- ggplot(white, aes(x=density, y=alcohol, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  scale_color_brewer(type = 'div') +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) + 
+  ggtitle("Alcohol vs. Density per Quality Factor") + 
+  xlab("Density (g/ml)") +
+  ylab("Alcohol (% by volume)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+# Colored by original quality level
+a.qf <- ggplot(white, aes(x=density, y=alcohol, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$alcohol), quantile(white$alcohol, prob=0.99)) + 
+  ggtitle("Alcohol vs. Density per Quality Level") + 
+  xlab("Density (g/ml)") +
+  ylab("Alcohol (% by volume)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+
+# Colored by simplified quality level
+t.qf2 <- ggplot(white, aes(x=density, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point(position='jitter') + 
+  scale_color_brewer(type = 'div') +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99)) + 
+  ggtitle("Total Sulfur Dioxide vs. Density per Quality Factor") + 
+  xlab("Density (g/ml)") +
+  ylab("Total Sulfur Dioxide (mg / dm^3)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+# Colored by original quality level
+t.qf <- ggplot(white, aes(x=density, y=total.sulfur.dioxide, color=quality.f2)) +
+  geom_point() + 
+  scale_color_brewer() +
+  xlim(min(white$density), quantile(white$density, prob=0.99)) +
+  ylim(min(white$total.sulfur.dioxide), quantile(white$total.sulfur.dioxide, prob=0.99)) + 
+  ggtitle("Total Sulfur Dioxide vs. Density per Quality Level") + 
+  xlab("Density (g/ml)") +
+  ylab("Total Sulfur Dioxide (mg / dm^3)") +
+  theme(title=element_text(size=10, face='bold'),
+      axis.title=element_text(size=8), 
+      axis.text=element_text(size=8),
+      legend.text=element_text(size=8))
+
+grid.arrange(rs.qf2, rs.qf, a.qf2, a.qf, t.qf2, t.qf, ncol=2)
+
+```
+The above plot residual sugar, alcohol, and total sulfur dioxide against density separately.  The left column uses the simplified quality level and the right one uses the original quality level. In both kinds of plots, holding density (mostly from the lower end of density), higher  residual.sugar or alcohol, or total sulfur dioxide seem to have better quality respectively.
+
+
+## 6. Reflection
+The white wine data set contains information on physicochemical properties affect white wine quality for approximately 5,000 white variants of the Portuguese "Vinho Verde" wine from 2009 source. I started by understanding the individual variables in the data set, and then I explored interesting questions and leads as I continued to make observations on plots. Eventually, I explored the quality across many variables and created a linear model to predict quality of wine.
+
+Linear model didn't turn out right.  Wine is nothing like vinegar or soy sauce.  It is full of delicateness and subtleness.  Linear regression is not suitable to predict wine quality as alcohol accounts for about 20% variance of quality  while density for 10% variance of quality.  Other attributes do not correlate to quality significantly.  
+
+## 7. Reference
+[Creating Effective Plots] (https://docs.google.com/document/d/1-f3wM3mJSkoWxDmPjsyRnWvNgM57YUPloucOIl07l4c/pub)
+
+[Colors (ggplot2)] (http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#palettes-color-brewer)
+
+[My Commonly Done ggplot2 graphs: Part 2] (https://www.r-bloggers.com/my-commonly-done-ggplot2-graphs-part-2/)
+
+[Teru Watanabe] (https://rpubs.com/watanabe8760/white-wine)
+
+

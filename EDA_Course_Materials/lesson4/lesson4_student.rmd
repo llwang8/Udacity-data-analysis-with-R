@@ -1,6 +1,6 @@
 Lesson 4
 ========================================================
-
+### Explore Two Variables
 
 ***
 
@@ -154,8 +154,7 @@ ggplot(aes(x=age, y=pf$friendships_initiated), data=pf) +
   geom_line(stat = 'summary', fun.y=mean) +
   geom_line(stat = 'summary', fun.y=quantile, fun.args = list(probs = .1),
             linetype=2, color='blue') +
-    geom_line(stat = 'summary', fun.y = quantile, fun.args = list(probs = .9), linetype=2, color='blue') +
-  geom_line(stat = 'summary', fun.y=quantile, fun.args = list(probs = .9),             linetype=2, color='blue')
+  geom_line(stat = 'summary', fun.y = quantile, fun.args = list(probs = .9), linetype=2, color='blue') 
 
 ```
 
